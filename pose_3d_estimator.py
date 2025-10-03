@@ -223,17 +223,20 @@ class Pose3DEstimator:
         processing_stats = []
         
         processable_people = [p for p in people_analysis if p['processable']]
+        total_people = len(processable_people)
         
-        print(f"\n🎯 Processing {len(processable_people)} people...")
+        print(f"\n🎯 Processing {total_people} people...")
         
-        for person_analysis in people_analysis:
-            person_idx = person_analysis['person_id']
+        start_time = time.time()
+        
+        for person_idx, person_analysis in enumerate(people_analysis):
+            person_id = person_analysis['person_id']
             
             if not person_analysis['processable']:
-                print(f"⏭️  Person {person_idx}: Skipped (insufficient data)")
+                print(f"⏭️  Person {person_id}: Skipped (insufficient data)")
                 all_people_poses_3d.append(None)
                 processing_stats.append({
-                    'person_id': person_idx,
+                    'person_id': person_id,
                     'status': 'skipped',
                     'reason': 'insufficient_frames',
                     'valid_frames': person_analysis['valid_frames']
@@ -241,17 +244,26 @@ class Pose3DEstimator:
                 continue
             
             try:
-                print(f"🔄 Processing Person {person_idx}...")
+                # Progress tracking
+                elapsed_time = time.time() - start_time
+                people_per_second = (person_idx + 1) / elapsed_time if elapsed_time > 0 else 0
+                remaining_people = total_people - (person_idx + 1)
+                eta = remaining_people / people_per_second if people_per_second > 0 else 0
+                
+                print(f"\r🔄 Processing Person {person_id}... "
+                      f"({person_idx + 1}/{total_people} | "
+                      f"Speed: {people_per_second:.1f} people/s | "
+                      f"ETA: {eta:.1f}s)", end="", flush=True)
                 
                 # Collect person poses
-                person_poses = self._collect_person_poses(poses_2d, person_idx)
+                person_poses = self._collect_person_poses(poses_2d, person_id)
                 
                 # Apply filtering if enabled
                 if enable_filtering:
                     person_poses = self._filter_poses(person_poses)
                 
-                # Convert to 3D
-                poses_3d = self._convert_to_3d(person_poses, width, height)
+                # Convert to 3D với progress tracking
+                poses_3d = self._convert_to_3d_with_progress(person_poses, width, height, person_id)
                 
                 # Apply smoothing if enabled
                 if enable_smoothing:
@@ -260,28 +272,33 @@ class Pose3DEstimator:
                 all_people_poses_3d.append(poses_3d)
                 
                 processing_stats.append({
-                    'person_id': person_idx,
+                    'person_id': person_id,
                     'status': 'success',
                     'input_frames': len(person_poses),
                     'output_frames': len(poses_3d),
                     'quality_score': person_analysis['avg_quality']
                 })
                 
-                print(f"✅ Person {person_idx}: {len(poses_3d)} frames processed")
+                # Clear the progress line and print success
+                print(f"\r✅ Person {person_id}: {len(poses_3d)} frames processed"
+                      + " " * 50)  # Clear remaining characters
                 
             except Exception as e:
-                print(f"❌ Person {person_idx}: Error - {e}")
+                print(f"\r❌ Person {person_id}: Error - {e}"
+                      + " " * 50)  # Clear remaining characters
                 all_people_poses_3d.append(None)
                 
                 processing_stats.append({
-                    'person_id': person_idx,
+                    'person_id': person_id,
                     'status': 'failed',
                     'error': str(e),
                     'valid_frames': person_analysis['valid_frames']
                 })
         
         successful_people = sum(1 for stat in processing_stats if stat['status'] == 'success')
-        print(f"\n✅ Processing completed: {successful_people}/{len(people_analysis)} people successful")
+        total_time = time.time() - start_time
+        print(f"\n✅ Processing completed: {successful_people}/{len(people_analysis)} people successful "
+              f"in {total_time:.1f}s ({successful_people/total_time:.1f} people/s)")
         
         return all_people_poses_3d, processing_stats
     
@@ -344,6 +361,32 @@ class Pose3DEstimator:
         poses_3d = self.predictor.predict_3d(poses_2d, width, height)
         
         print(f"   Output shape: {poses_3d.shape}")
+        
+        return poses_3d
+    
+    def _convert_to_3d_with_progress(self, person_poses, width, height, person_id):
+        """Convert 2D poses to 3D với progress tracking"""
+        total_frames = len(person_poses)
+        
+        print(f"\n🎯 Converting Person {person_id} to 3D ({total_frames} frames)...")
+        
+        # Extract x,y coordinates (ignore confidence if present)
+        if person_poses.shape[-1] > 2:
+            poses_2d = person_poses[..., :2]
+        else:
+            poses_2d = person_poses
+        
+        # Sử dụng phương thức predict_3d_with_progress nếu có, fallback về phương thức cũ
+        if hasattr(self.predictor, 'predict_3d_with_progress'):
+            poses_3d = self.predictor.predict_3d_with_progress(poses_2d, width, height)
+        else:
+            # Fallback: sử dụng phương thức thông thường
+            start_time = time.time()
+            poses_3d = self.predictor.predict_3d(poses_2d, width, height)
+            processing_time = time.time() - start_time
+            fps = total_frames / processing_time if processing_time > 0 else 0
+            print(f"\r✅ Person {person_id}: {total_frames} frames converted "
+                  f"in {processing_time:.1f}s ({fps:.1f} FPS)")
         
         return poses_3d
     
@@ -418,6 +461,9 @@ class Pose3DEstimator:
         json_path = f"{output_prefix}.json"
         
         try:
+            print(f"💾 Saving 3D poses...")
+            start_time = time.time()
+            
             # Save as NumPy file
             np.save(numpy_path, valid_poses)
             
@@ -431,12 +477,14 @@ class Pose3DEstimator:
             with open(json_path, 'w') as f:
                 json.dump(json_data, f, indent=2)
             
+            save_time = time.time() - start_time
+            
             output_paths = {
                 'numpy': numpy_path,
                 'json': json_path
             }
             
-            print(f"\n💾 Saved 3D poses:")
+            print(f"✅ Saved 3D poses in {save_time:.1f}s:")
             print(f"   NumPy: {numpy_path}")
             print(f"   JSON: {json_path}")
             print(f"   People: {len(valid_poses)}")
