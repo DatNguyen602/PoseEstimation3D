@@ -8,7 +8,7 @@ import queue
 import threading
 import asyncio
 import traceback
-from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
@@ -35,6 +35,7 @@ app = FastAPI(
 
 # Mount static files directory for reference videos
 app.mount("/reference_videos", StaticFiles(directory=REFERENCE_VIDEOS_DIR), name="reference_videos")
+app.mount("/res/output", StaticFiles(directory=OUTPUTS_DIR), name="outputs")
 
 # --- CORS Configuration ---
 origins = [
@@ -48,7 +49,7 @@ origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,
+    allow_credentials=False, # Set to False when using wildcard origin
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
@@ -112,7 +113,7 @@ async def save_reference_video(upload_file: UploadFile) -> str:
     finally:
         upload_file.file.close()
     
-    print(f"📹 Saved new reference video: {video_path}")
+    print(f"📹 Saved new reference video to: {video_path}")
     return video_id
 
 @app.post("/api/reference_videos/", 
@@ -272,6 +273,213 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
             comparison_thread.join()
             cleanup_files(files_to_cleanup)
     return EventSourceResponse(event_generator())
+
+
+def run_video_annotation_in_thread(user_video_path, reference_video_path, output_path, result_queue):
+    """
+    Runs the video annotation process in a thread.
+    Compares user video to reference and creates an annotated video with feedback.
+    """
+    try:
+        result_queue.put({"type": "log", "data": "Starting video annotation..."})
+        
+        if not os.path.isfile(reference_video_path):
+            raise FileNotFoundError(f"Reference video not found at: {reference_video_path}")
+
+        comparison = PoseComparison(reference_video_path)
+        comparison.annotate_video(user_video_path, output_path)
+        
+        result_queue.put({"type": "log", "data": f"Annotated video created: {output_path}"})
+
+        result_data = {
+            "annotated_video_path": output_path 
+        }
+        result_queue.put({"type": "result", "data": result_data})
+
+    except Exception as e:
+        error_str = traceback.format_exc()
+        result_queue.put({"type": "error", "data": error_str})
+    finally:
+        result_queue.put({"type": "done"})
+
+
+@app.post("/api/analyze_performance/", 
+          summary="Analyze user video and provide feedback video",
+          tags=["Video Comparison"])
+async def analyze_performance(
+    user_video: UploadFile = File(...), 
+    reference_video_id: str = Form(None),
+    reference_video: UploadFile = File(None)
+):
+    """
+    Upload a user's performance video to compare against a reference video.
+
+    You can either provide the ID of a pre-existing reference video via `reference_video_id`
+    or upload a new reference video directly via `reference_video`.
+
+    This endpoint processes the video in the background and returns an annotated 
+    video showing the user's pose with color-coded feedback on correctness 
+    compared to the reference pose.
+
+    The process is streamed using Server-Sent Events (SSE).
+    """
+    
+    if not reference_video and not reference_video_id:
+        raise HTTPException(status_code=400, detail="You must provide either a 'reference_video_id' or upload a 'reference_video'.")
+
+    user_video_path, _ = await save_upload_file(user_video)
+    
+    ref_video_path = None
+    files_to_cleanup = [user_video_path]
+
+    try:
+        if reference_video:
+            # User uploaded a new reference video, save it temporarily
+            ref_video_path, _ = await save_upload_file(reference_video)
+            files_to_cleanup.append(ref_video_path)
+        elif reference_video_id:
+            # User selected an existing reference video
+            ref_video_path = os.path.join(REFERENCE_VIDEOS_DIR, reference_video_id)
+            if not os.path.isfile(ref_video_path):
+                raise HTTPException(status_code=404, detail=f"Reference video not found: {reference_video_id}")
+
+        user_video_basename = os.path.basename(user_video_path)
+        annotated_filename = f"annotated_{user_video_basename}"
+        output_path = os.path.join(OUTPUTS_DIR, annotated_filename)
+
+        async def event_generator():
+            result_queue = queue.Queue()
+            
+            annotation_thread = threading.Thread(
+                target=run_video_annotation_in_thread,
+                args=(user_video_path, ref_video_path, output_path, result_queue)
+            )
+            annotation_thread.start()
+            
+            try:
+                while True:
+                    try:
+                        message = result_queue.get_nowait()
+                        if isinstance(message, dict):
+                            event_type = message.get("type", "log")
+                            data = message.get("data", "")
+                            
+                            if event_type == "done":
+                                yield {"event": "done", "data": "Processing finished."}
+                                break
+                            elif event_type == "result":
+                                yield {"event": "result", "data": json.dumps(data)}
+                            elif event_type == "error":
+                                yield {"event": "error", "data": data}
+                                break
+                            else: # log
+                                yield {"event": "log", "data": data}
+                    except queue.Empty:
+                        if not annotation_thread.is_alive():
+                            break
+                        await asyncio.sleep(0.1)
+            finally:
+                annotation_thread.join()
+                cleanup_files(files_to_cleanup)
+        
+        return EventSourceResponse(event_generator())
+
+    except HTTPException as e:
+        # If an HTTPException was raised, ensure cleanup is performed
+        cleanup_files(files_to_cleanup)
+        raise e
+
+
+def run_video_annotation_in_thread(user_video_path, reference_video_path, output_path, result_queue):
+    """
+    Runs the video annotation process in a thread.
+    Compares user video to reference and creates an annotated video with feedback.
+    """
+    try:
+        result_queue.put({"type": "log", "data": "Starting video annotation..."})
+        
+        if not os.path.isfile(reference_video_path):
+            raise FileNotFoundError(f"Reference video not found at: {reference_video_path}")
+
+        comparison = PoseComparison(reference_video_path)
+        comparison.annotate_video(user_video_path, output_path)
+        
+        result_queue.put({"type": "log", "data": f"Annotated video created: {output_path}"})
+
+        result_data = {
+            "annotated_video_path": output_path 
+        }
+        result_queue.put({"type": "result", "data": result_data})
+
+    except Exception as e:
+        error_str = traceback.format_exc()
+        result_queue.put({"type": "error", "data": error_str})
+    finally:
+        result_queue.put({"type": "done"})
+
+
+@app.post("/api/analyze_performance/", 
+          summary="Analyze user video and provide feedback video",
+          tags=["Video Comparison"])
+async def analyze_performance(user_video: UploadFile = File(...), reference_video_id: str = Form(...)):
+    """
+    Upload a user's performance video to compare against a stored reference video.
+
+    This endpoint processes the video in the background and returns an annotated 
+    video showing the user's pose with color-coded feedback on correctness 
+    compared to the reference pose.
+
+    The process is streamed using Server-Sent Events (SSE).
+    """
+    user_video_path, _ = await save_upload_file(user_video)
+    
+    ref_video_path = os.path.join(REFERENCE_VIDEOS_DIR, reference_video_id)
+    if not os.path.isfile(ref_video_path):
+        cleanup_files([user_video_path])
+        raise HTTPException(status_code=404, detail=f"Reference video not found: {reference_video_id}")
+
+    user_video_basename = os.path.basename(user_video_path)
+    annotated_filename = f"annotated_{user_video_basename}"
+    output_path = os.path.join(OUTPUTS_DIR, annotated_filename)
+
+    async def event_generator():
+        result_queue = queue.Queue()
+        files_to_cleanup = [user_video_path]
+        
+        annotation_thread = threading.Thread(
+            target=run_video_annotation_in_thread,
+            args=(user_video_path, ref_video_path, output_path, result_queue)
+        )
+        annotation_thread.start()
+        
+        try:
+            while True:
+                try:
+                    message = result_queue.get_nowait()
+                    if isinstance(message, dict):
+                        event_type = message.get("type", "log")
+                        data = message.get("data", "")
+                        
+                        if event_type == "done":
+                            yield {"event": "done", "data": "Processing finished."}
+                            break
+                        elif event_type == "result":
+                            yield {"event": "result", "data": json.dumps(data)}
+                        elif event_type == "error":
+                            yield {"event": "error", "data": data}
+                            break
+                        else: # log
+                            yield {"event": "log", "data": data}
+                except queue.Empty:
+                    if not annotation_thread.is_alive():
+                        break
+                    await asyncio.sleep(0.1)
+        finally:
+            annotation_thread.join()
+            cleanup_files(files_to_cleanup)
+    
+    return EventSourceResponse(event_generator())
+
 
 @app.websocket("/ws/compare_live/{reference_video_id}")
 async def websocket_compare_live(websocket: WebSocket, reference_video_id: str):

@@ -45,7 +45,7 @@ class PoseComparison:
         
         return keypoints, results
     
-    def _calculate_score(self, pose1, pose2, threshold=0.1):
+    def _calculate_score(self, pose1, pose2, threshold=0.07):
         """
         Calculate score based on number of correct keypoints
         

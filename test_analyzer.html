@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Analyze Performance API</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; background-color: #f8f9fa; color: #333; }
+        .container { max-width: 800px; margin: auto; }
+        h1, h2 { color: #0056b3; }
+        form { background: #fff; padding: 2em; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        #logs { border: 1px solid #ccc; padding: 1em; margin-top: 1em; height: 300px; overflow-y: scroll; background: #e9ecef; border-radius: 4px; }
+        #result video { max-width: 100%; border-radius: 4px; margin-top: 1em; }
+        #result a { font-weight: bold; color: #28a745; }
+        button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #0056b3; }
+        select, input[type="file"] { width: 100%; padding: 8px; margin-top: 5px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
+        .hidden { display: none; }
+        .form-section { margin-bottom: 1.5em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Analyze Your Pose Performance</h1>
+        <p>Upload a video of your performance to get an annotated video with feedback.</p>
+        
+        <form id="upload-form">
+            <div class="form-section">
+                <label><strong>1. Choose Reference Video Source:</strong></label>
+                <div>
+                    <input type="radio" id="ref-select" name="ref_source" value="select" checked>
+                    <label for="ref-select">Select from list</label>
+                </div>
+                <div>
+                    <input type="radio" id="ref-upload" name="ref_source" value="upload">
+                    <label for="ref-upload">Upload new video</label>
+                </div>
+            </div>
+
+            <div id="ref-select-div" class="form-section">
+                <label for="reference_video_id">Reference Video:</label>
+                <select id="reference_video_id" name="reference_video_id" required>
+                    <option value="">Loading...</option>
+                </select>
+            </div>
+
+            <div id="ref-upload-div" class="form-section hidden">
+                <label for="reference_video">Upload Reference Video:</label>
+                <input type="file" id="reference_video" name="reference_video" accept="video/*">
+            </div>
+
+            <div class="form-section">
+                <label for="user_video"><strong>2. Upload Your Performance Video:</strong></label>
+                <input type="file" id="user_video" name="user_video" accept="video/*" required>
+            </div>
+            
+            <button type="submit">Analyze</button>
+        </form>
+
+        <h2>Processing Log</h2>
+        <div id="logs"></div>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('upload-form');
+        const logsDiv = document.getElementById('logs');
+        const resultDiv = document.getElementById('result');
+        
+        const refSelectRadio = document.getElementById('ref-select');
+        const refUploadRadio = document.getElementById('ref-upload');
+        const refSelectDiv = document.getElementById('ref-select-div');
+        const refUploadDiv = document.getElementById('ref-upload-div');
+        const refVideoIdSelect = document.getElementById('reference_video_id');
+        const refVideoInput = document.getElementById('reference_video');
+
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+
+        // --- UI Logic ---
+        refSelectRadio.addEventListener('change', () => {
+            if (refSelectRadio.checked) {
+                refSelectDiv.classList.remove('hidden');
+                refUploadDiv.classList.add('hidden');
+                refVideoIdSelect.required = true;
+                refVideoInput.required = false;
+            }
+        });
+
+        refUploadRadio.addEventListener('change', () => {
+            if (refUploadRadio.checked) {
+                refSelectDiv.classList.add('hidden');
+                refUploadDiv.classList.remove('hidden');
+                refVideoIdSelect.required = false;
+                refVideoInput.required = true;
+            }
+        });
+
+        // --- API Logic ---
+        async function loadReferenceVideos() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/reference_videos/`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const videos = await response.json();
+                refVideoIdSelect.innerHTML = '<option value="">-- Select a Reference Video --</option>';
+                videos.forEach(video => {
+                    const option = document.createElement('option');
+                    option.value = video.video_id;
+                    option.textContent = video.video_id;
+                    refVideoIdSelect.appendChild(option);
+                });
+            } catch (error) {
+                refVideoIdSelect.innerHTML = '<option value="">Could not load videos</option>';
+                console.error('Error loading reference videos:', error);
+                logsDiv.innerHTML = `Error loading reference videos: ${error.message}`;
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            logsDiv.innerHTML = '';
+            resultDiv.innerHTML = '';
+
+            const formData = new FormData(form);
+            
+            if (refSelectRadio.checked) {
+                formData.delete('reference_video');
+            } else {
+                formData.delete('reference_video_id');
+            }
+
+            logsDiv.innerHTML = 'Initializing analysis...<br>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/analyze_performance/`, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${response.status} ${response.statusText}. ${errorText}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let dataBuffer = '';
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    dataBuffer += decoder.decode(value, { stream: true });
+                    const messages = dataBuffer.split('\n\n');
+                    dataBuffer = messages.pop();
+
+                    for (const msg of messages) {
+                        if (!msg.trim()) continue;
+
+                        let eventName = 'message';
+                        let eventData = '';
+                        const lines = msg.split('\n');
+
+                        for (const line of lines) {
+                            if (line.startsWith('event:')) {
+                                eventName = line.substring(6).trim();
+                            } else if (line.startsWith('data:')) {
+                                eventData += line.substring(5).trim();
+                            }
+                        }
+
+                        if (eventName === 'log') {
+                            logsDiv.innerHTML += `[LOG] ${eventData}<br>`;
+                        } else if (eventName === 'result') {
+                            const resultData = JSON.parse(eventData);
+                            const videoPath = resultData.annotated_video_path;
+                            
+                            resultDiv.innerHTML = `<h2>Analysis Complete!</h2>
+                                               <p>Your annotated video is ready. Red limbs indicate a mismatch with the reference pose.</p>
+                                               <video width="720" height="480" controls autoplay>
+                                                    <source src="${API_BASE_URL}/${videoPath}" type="video/mp4">
+                                                    Your browser does not support the video tag.
+                                               </video>
+                                               <br>
+                                               <a href="${API_BASE_URL}/${videoPath}" target="_blank">Open video in new tab</a>`;
+                            logsDiv.innerHTML += `<strong>[SUCCESS] Result received.</strong><br>`;
+                        } else if (eventName === 'done') {
+                            logsDiv.innerHTML += '✅ Processing complete.<br>';
+                        } else if (eventName === 'error') {
+                            logsDiv.innerHTML += `<strong style="color:red;">[ERROR] ${eventData}</strong><br>`;
+                        }
+                        logsDiv.scrollTop = logsDiv.scrollHeight;
+                    }
+                }
+            } catch (error) {
+                logsDiv.innerHTML += `<strong style="color:red;">[FATAL] ${error.message}</strong><br>`;
+                console.error('Fetch error:', error);
+            }
+        });
+
+        window.onload = loadReferenceVideos;
+    </script>
+</body>
+</html>
