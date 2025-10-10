@@ -201,7 +201,7 @@ class VideoPose3DPredictor:
     
     def predict_3d(self, poses_2d, width, height, return_confidence=False):
         """
-        Predict 3D poses từ 2D poses
+        Predict 3D poses từ 2D poses với FULL frames (không mất frame)
         
         Args:
             poses_2d: 2D poses array (num_frames, num_joints, 2 or 3)
@@ -210,7 +210,7 @@ class VideoPose3DPredictor:
             return_confidence: Return confidence scores if available
             
         Returns:
-            3D poses array (num_frames, num_joints, 3)
+            3D poses array (num_frames, num_joints, 3) - SAME LENGTH as input
         """
         if len(poses_2d) == 0:
             raise ValueError("Empty poses_2d array")
@@ -226,6 +226,8 @@ class VideoPose3DPredictor:
         else:
             poses_2d_xy = poses_2d
         
+        original_length = len(poses_2d_xy)  # Lưu length gốc
+        
         print(f"🎯 Predicting 3D poses...")
         print(f"   Input shape: {poses_2d_xy.shape}")
         print(f"   Image size: {width}x{height}")
@@ -233,8 +235,18 @@ class VideoPose3DPredictor:
         # Normalize screen coordinates
         poses_2d_norm = normalize_screen_coordinates(poses_2d_xy, w=width, h=height)
         
-        # Pad sequence if needed
-        poses_2d_padded = self._pad_sequence(poses_2d_norm)
+        # ===== PAD INPUT TO PRESERVE ALL FRAMES =====
+        pad_size = self.receptive_field // 2  # 121 frames
+        
+        print(f"   Padding: {pad_size} frames at start and end")
+        
+        # Edge padding (repeat first/last frames)
+        poses_2d_padded = np.pad(
+            poses_2d_norm,
+            pad_width=((pad_size, pad_size), (0, 0), (0, 0)),
+            mode='edge'  # Repeat edge values
+        )
+        
         print(f"   Padded shape: {poses_2d_padded.shape}")
         
         # Convert to tensor
@@ -245,16 +257,27 @@ class VideoPose3DPredictor:
             output_3d = self.model(input_tensor)
         
         # Convert back to numpy
-        poses_3d = output_3d.squeeze(0).cpu().numpy()
+        poses_3d_padded = output_3d.squeeze(0).cpu().numpy()
         
-        # Remove padding if it was added
-        if len(poses_2d) < self.receptive_field:
-            start_idx = (self.receptive_field - len(poses_2d)) // 2
-            end_idx = start_idx + len(poses_2d)
-            poses_3d = poses_3d[start_idx:end_idx]
+        print(f"   Predicted shape (padded): {poses_3d_padded.shape}")
+        
+        # ===== EXTRACT ORIGINAL FRAMES (REMOVE PADDING) =====
+        # Model output length might be: input_length - receptive_field + 1
+        # We need to extract the middle section corresponding to original frames
+        
+        if len(poses_3d_padded) >= original_length:
+            # Calculate trim indices
+            # Center the extraction
+            start_idx = (len(poses_3d_padded) - original_length) // 2
+            end_idx = start_idx + original_length
+            
+            poses_3d = poses_3d_padded[start_idx:end_idx]
+        else:
+            # Fallback: if output is shorter (shouldn't happen with padding)
+            poses_3d = poses_3d_padded
         
         print(f"   Output shape: {poses_3d.shape}")
-        print(f"✅ 3D prediction completed")
+        print(f"✅ 3D prediction completed - preserved all {original_length} frames")
         
         return poses_3d
     

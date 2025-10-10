@@ -553,7 +553,7 @@ def main():
     # detector.set_confidence_thresholds(person_conf=0.25, keypoint_conf=0.2)
     
     # Test với video
-    video_path = "res/input/video.mp4"  # Thay đổi path này
+    video_path = "res/input/nhay.mp4"  # Thay đổi path này
     
     if not os.path.exists(video_path):
         print(f"❌ Error: Video file not found: {video_path}")
