@@ -18,13 +18,11 @@ class PoseComparison:
         self.mp_drawing = mp.solutions.drawing_utils
         
         # Load reference video
-        self.reference_video_path = reference_video_path
         self.ref_cap = cv2.VideoCapture(reference_video_path) # duong dan video 
         self.ref_fps = self.ref_cap.get(cv2.CAP_PROP_FPS)
         
         # Get video info
         total_frames = int(self.ref_cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        print(f"Reference video: {total_frames} frames, {self.ref_fps} FPS")
         
         # Video recording
         self.video_writer = None
@@ -310,20 +308,23 @@ class PoseComparison:
                 # Write frame to output video
                 video_writer.write(display_frame)
 
-                # Report progress (e.g., every 30 frames)
-                if i % 30 == 0:
-                    progress_queue.put(f"Processed frame {i}/{total_frames}...")
+                # Report detailed progress (every 10 frames for better UX)
+                if i % 10 == 0:
+                    progress_percentage = 20 + int((i / total_frames) * 70)  # 20-90% range for frame processing
+                    progress_message = f"Processed frame {i+1}/{total_frames} ({progress_percentage}%)"
+                    progress_queue.put({"type": "progress", "step": "processing_frames", "message": progress_message, "percentage": progress_percentage})
         
         except Exception as e:
             import traceback
-            progress_queue.put(f"ERROR: {str(e)}\n{traceback.format_exc()}")
+            progress_queue.put({"type": "error", "data": f"ERROR: {str(e)}\n{traceback.format_exc()}"})
 
         finally:
             # Release all resources
             user_cap.release()
             self.ref_cap.release()
             video_writer.release()
-            progress_queue.put(f"✅ Comparison video saved to {output_path}")
+            progress_queue.put({"type": "progress", "step": "saving_video", "message": "Saving comparison video... (will be preserved for viewing)", "percentage": 95})
+            progress_queue.put({"type": "progress", "step": "completed", "message": f"✅ Comparison video saved to {output_path} and preserved for viewing", "percentage": 100})
 
     def annotate_video(self, raw_user_video_path: str, annotated_output_path: str):
         """
@@ -379,7 +380,7 @@ class PoseComparison:
         finally:
             user_cap.release()
             video_writer.release()
-            print(f"✅ Annotation complete. Final video saved to: {annotated_output_path}")
+            print(f"✅ Annotation complete. Final video saved to: {annotated_output_path} (preserved for viewing)")
 
     #
     def run(self, camera_index=0):
