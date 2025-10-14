@@ -467,6 +467,8 @@ class PoseDetector:
         try:
             with open(json_path, 'w') as f:
                 json.dump(pose_data, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
             print(f"💾 Saved 2D poses to: {json_path}")
         except Exception as e:
             print(f"❌ Error saving JSON: {e}")

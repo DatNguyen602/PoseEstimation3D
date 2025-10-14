@@ -8,16 +8,27 @@ import queue
 import threading
 import asyncio
 import traceback
+import logging
 from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 
-from pose_comparison import PoseComparison, LiveComparisonSession
-from api_models import CompareRequest, CompareResponse
+from pose_comparison import PoseComparison, LiveComparisonSession, LiveCameraSession
 
 # Import the pipeline function
 from run_pipeline import run_full_pipeline
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('api.log')
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # --- Directory Configuration ---
 UPLOADS_DIR = "uploads"
@@ -68,20 +79,20 @@ class QueueIO:
 
 def cleanup_files(files: list):
     """Deletes a list of files."""
-    print(f"🧹 Starting cleanup for {len(files)} files...")
+    logger.info(f"🧹 Starting cleanup for {len(files)} files...")
     for file_path in files:
         try:
             if os.path.exists(file_path):
                 os.remove(file_path)
-                print(f"🗑️ Deleted: {file_path}")
+                logger.info(f"🗑️ Deleted: {file_path}")
         except Exception as e:
-            print(f"⚠️ Error cleaning up file {file_path}: {e}")
+            logger.error(f"⚠️ Error cleaning up file {file_path}: {e}")
 
 async def save_upload_file(upload_file: UploadFile) -> str:
     """Saves a temporary uploaded file and returns its path and request ID."""
     request_id = str(uuid.uuid4())
     _, extension = os.path.splitext(upload_file.filename)
-    if extension.lower() not in ['.mp4', '.mov', '.avi']:
+    if extension.lower() not in ['.mp4', '.mov', '.avi', '.webm']:
         raise HTTPException(status_code=400, detail="Invalid file format.")
     
     video_filename = f"{request_id}{extension}"
@@ -93,7 +104,7 @@ async def save_upload_file(upload_file: UploadFile) -> str:
     finally:
         upload_file.file.close()
     
-    print(f"📹 Saved temporary video to: {video_path}")
+    logger.info(f"📹 Saved temporary video to: {video_path}")
     return video_path, request_id
 
 # --- Reference Video Management ---
@@ -113,7 +124,7 @@ async def save_reference_video(upload_file: UploadFile) -> str:
     finally:
         upload_file.file.close()
     
-    print(f"📹 Saved new reference video to: {video_path}")
+    logger.info(f"📹 Saved new reference video to: {video_path}")
     return video_id
 
 @app.post("/api/reference_videos/", 
@@ -201,31 +212,49 @@ async def process_video_stream(file: UploadFile = File(...)):
     return EventSourceResponse(event_generator())
 
 def run_video_comparison_in_thread(user_video_path, reference_video_path, output_path, result_queue):
+    """
+    Runs the video comparison process in a thread.
+    Creates side-by-side comparison video between user and reference videos.
+    """
     try:
-        result_queue.put("Starting side-by-side comparison...")
-        comparison_sbs = PoseComparison(reference_video_path)
-        comparison_sbs.process_video_files(user_video_path, output_path, result_queue)
-        result_queue.put(f"Side-by-side video created: {output_path}")
+        logger.info(f"🔄 Starting video comparison process...")
+        logger.info(f"   📹 User video: {user_video_path}")
+        logger.info(f"   🎬 Reference video: {reference_video_path}")
+        logger.info(f"   💾 Output: {output_path}")
 
-        result_queue.put("Starting user video annotation...")
-        output_dir = os.path.dirname(output_path)
-        user_video_basename = os.path.basename(user_video_path)
-        annotated_filename = f"annotated_{user_video_basename}"
-        annotated_output_path = os.path.join(output_dir, annotated_filename)
+        result_queue.put({"type": "progress", "step": "initializing", "message": "Initializing pose comparison...", "percentage": 0})
 
-        comparison_anno = PoseComparison(reference_video_path)
-        comparison_anno.annotate_video(user_video_path, annotated_output_path)
-        result_queue.put(f"Annotated video created: {annotated_output_path}")
+        logger.info(f"🤖 Initializing PoseComparison...")
+        comparison = PoseComparison(reference_video_path)
+        result_queue.put({"type": "progress", "step": "loading_videos", "message": "Loading video files...", "percentage": 10})
+
+        logger.info(f"⚙️ Processing video files and creating side-by-side comparison...")
+        comparison.process_video_files(user_video_path, output_path, result_queue)
+
+        logger.info(f"✅ Video comparison completed successfully!")
+        logger.info(f"   📊 Side-by-side video saved to: {output_path}")
+
+        # Generate proper video URL for frontend
+        video_filename = os.path.basename(output_path)
+        video_url = f"/res/output/{video_filename}"
 
         result_data = {
             "side_by_side_video_path": output_path,
-            "annotated_user_video_path": annotated_output_path
+            "side_by_side_video_url": video_url,
+            "message": "Video comparison completed successfully"
         }
+        result_queue.put({"type": "progress", "step": "completed", "message": "Comparison completed!", "percentage": 100})
         result_queue.put({"type": "result", "data": result_data})
+
     except Exception as e:
         error_str = traceback.format_exc()
-        result_queue.put({"type": "error", "data": error_str})
+        error_msg = f"❌ Error in video comparison: {str(e)}"
+        logger.error(error_msg)
+        logger.debug(f"🔍 Debug info - User: {user_video_path}, Ref: {reference_video_path}")
+        logger.debug(f"📋 Full traceback: {error_str}")
+        result_queue.put({"type": "error", "data": error_msg})
     finally:
+        logger.info(f"🏁 Video comparison thread finished")
         result_queue.put({"type": "done"})
 
 @app.post("/api/compare_videos/", 
@@ -244,7 +273,8 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
 
     async def event_generator():
         result_queue = queue.Queue()
-        files_to_cleanup = [user_video_path, ref_video_path, output_path, annotated_output_path]
+        # Only clean up the temporary uploaded files, not the results
+        files_to_cleanup = [user_video_path, ref_video_path]
         comparison_thread = threading.Thread(
             target=run_video_comparison_in_thread,
             args=(user_video_path, ref_video_path, output_path, result_queue)
@@ -259,10 +289,14 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
                             yield {"event": "done", "data": "Processing finished."}
                             break
                         elif message["type"] == "result":
+                            # Return the final result with video URL
                             yield {"event": "result", "data": json.dumps(message["data"])}
                         elif message["type"] == "error":
                             yield {"event": "error", "data": message["data"]}
                             break
+                        elif message["type"] == "progress":
+                            # Send detailed progress updates
+                            yield {"event": "progress", "data": json.dumps(message)}
                     else:
                         yield {"event": "log", "data": message}
                 except queue.Empty:
@@ -281,25 +315,31 @@ def run_video_annotation_in_thread(user_video_path, reference_video_path, output
     Compares user video to reference and creates an annotated video with feedback.
     """
     try:
-        result_queue.put({"type": "log", "data": "Starting video annotation..."})
-        
-        if not os.path.isfile(reference_video_path):
-            raise FileNotFoundError(f"Reference video not found at: {reference_video_path}")
+        logger.info(f"🔄 Starting video annotation process...")
+        logger.info(f"   📹 User video: {user_video_path}")
+        logger.info(f"   🎬 Reference video: {reference_video_path}")
+        logger.info(f"   💾 Output: {output_path}")
 
+        # Initialize pose comparison
+        logger.info(f"🤖 Initializing PoseComparison with reference video...")
         comparison = PoseComparison(reference_video_path)
-        comparison.annotate_video(user_video_path, output_path)
-        
-        result_queue.put({"type": "log", "data": f"Annotated video created: {output_path}"})
 
-        result_data = {
-            "annotated_video_path": output_path 
-        }
-        result_queue.put({"type": "result", "data": result_data})
+        # Process annotation
+        logger.info(f"🎨 Starting video annotation process...")
+        comparison.annotate_video(user_video_path, output_path)
+
+        logger.info(f"✅ Video annotation completed successfully!")
+        logger.info(f"   📊 Output saved to: {output_path}")
+        result_queue.put({"type": "result", "data": {"output_path": output_path}})
 
     except Exception as e:
-        error_str = traceback.format_exc()
-        result_queue.put({"type": "error", "data": error_str})
+        error_msg = f"❌ Error in video annotation: {str(e)}"
+        logger.error(error_msg)
+        logger.debug(f"🔍 Debug info - User video: {user_video_path}, Ref video: {reference_video_path}")
+        logger.debug(f"📋 Full traceback: {traceback.format_exc()}")
+        result_queue.put({"type": "error", "data": error_msg})
     finally:
+        logger.info(f"🏁 Video annotation thread finished")
         result_queue.put({"type": "done"})
 
 
@@ -378,6 +418,9 @@ async def analyze_performance(
                         if not annotation_thread.is_alive():
                             break
                         await asyncio.sleep(0.1)
+            except Exception as e:
+                logger.error(f"Error in event generator: {e}")
+                yield {"event": "error", "data": str(e)}
             finally:
                 annotation_thread.join()
                 cleanup_files(files_to_cleanup)
@@ -389,103 +432,10 @@ async def analyze_performance(
         cleanup_files(files_to_cleanup)
         raise e
 
-
-def run_video_annotation_in_thread(user_video_path, reference_video_path, output_path, result_queue):
-    """
-    Runs the video annotation process in a thread.
-    Compares user video to reference and creates an annotated video with feedback.
-    """
-    try:
-        result_queue.put({"type": "log", "data": "Starting video annotation..."})
-        
-        if not os.path.isfile(reference_video_path):
-            raise FileNotFoundError(f"Reference video not found at: {reference_video_path}")
-
-        comparison = PoseComparison(reference_video_path)
-        comparison.annotate_video(user_video_path, output_path)
-        
-        result_queue.put({"type": "log", "data": f"Annotated video created: {output_path}"})
-
-        result_data = {
-            "annotated_video_path": output_path 
-        }
-        result_queue.put({"type": "result", "data": result_data})
-
-    except Exception as e:
-        error_str = traceback.format_exc()
-        result_queue.put({"type": "error", "data": error_str})
-    finally:
-        result_queue.put({"type": "done"})
-
-
-@app.post("/api/analyze_performance/", 
-          summary="Analyze user video and provide feedback video",
-          tags=["Video Comparison"])
-async def analyze_performance(user_video: UploadFile = File(...), reference_video_id: str = Form(...)):
-    """
-    Upload a user's performance video to compare against a stored reference video.
-
-    This endpoint processes the video in the background and returns an annotated 
-    video showing the user's pose with color-coded feedback on correctness 
-    compared to the reference pose.
-
-    The process is streamed using Server-Sent Events (SSE).
-    """
-    user_video_path, _ = await save_upload_file(user_video)
-    
-    ref_video_path = os.path.join(REFERENCE_VIDEOS_DIR, reference_video_id)
-    if not os.path.isfile(ref_video_path):
-        cleanup_files([user_video_path])
-        raise HTTPException(status_code=404, detail=f"Reference video not found: {reference_video_id}")
-
-    user_video_basename = os.path.basename(user_video_path)
-    annotated_filename = f"annotated_{user_video_basename}"
-    output_path = os.path.join(OUTPUTS_DIR, annotated_filename)
-
-    async def event_generator():
-        result_queue = queue.Queue()
-        files_to_cleanup = [user_video_path]
-        
-        annotation_thread = threading.Thread(
-            target=run_video_annotation_in_thread,
-            args=(user_video_path, ref_video_path, output_path, result_queue)
-        )
-        annotation_thread.start()
-        
-        try:
-            while True:
-                try:
-                    message = result_queue.get_nowait()
-                    if isinstance(message, dict):
-                        event_type = message.get("type", "log")
-                        data = message.get("data", "")
-                        
-                        if event_type == "done":
-                            yield {"event": "done", "data": "Processing finished."}
-                            break
-                        elif event_type == "result":
-                            yield {"event": "result", "data": json.dumps(data)}
-                        elif event_type == "error":
-                            yield {"event": "error", "data": data}
-                            break
-                        else: # log
-                            yield {"event": "log", "data": data}
-                except queue.Empty:
-                    if not annotation_thread.is_alive():
-                        break
-                    await asyncio.sleep(0.1)
-        finally:
-            annotation_thread.join()
-            cleanup_files(files_to_cleanup)
-    
-    return EventSourceResponse(event_generator())
-
-
 @app.websocket("/ws/compare_live/{reference_video_id}")
 async def websocket_compare_live(websocket: WebSocket, reference_video_id: str):
     """
     Handles a live comparison session via WebSocket.
-    - The client connects to this endpoint with a `reference_video_id`.
     - It streams webcam frames to the server.
     - The server streams back real-time comparison results (score, keypoints).
     - After disconnection, a final annotated video of the performance is saved.
@@ -512,39 +462,186 @@ async def websocket_compare_live(websocket: WebSocket, reference_video_id: str):
             await websocket.send_json({"type": "comparison_result", **result})
 
     except WebSocketDisconnect:
-        print("Client disconnected from live session.")
+        logger.info("Client disconnected from live session.")
     except Exception as e:
-        print(f"An error occurred during live session: {e}")
-        traceback.print_exc()
+        logger.error(f"An error occurred during live session: {e}")
+        logger.debug(f"Traceback: {traceback.format_exc()}")
+        logger.info(f"Error details - Reference video ID: {reference_video_id}")
     finally:
         # Clean up the session and post-process the recorded video
         if session:
-            print("Session closed. Starting post-processing of recorded video...")
+            logger.info("Session closed. Starting post-processing of recorded video...")
             raw_video_path = session.close()
 
             annotated_filename = os.path.basename(raw_video_path).replace("live_session_", "annotated_")
             annotated_video_path = os.path.join(OUTPUTS_DIR, annotated_filename)
 
             try:
-                print(f"Annotating video: {raw_video_path} -> {annotated_video_path}")
+                logger.info(f"Annotating video: {raw_video_path} -> {annotated_video_path}")
                 # Re-create a comparison object for annotation as the session one is closed
                 annotation_comparison = PoseComparison(ref_video_path)
                 annotation_comparison.annotate_video(raw_video_path, annotated_video_path)
                 
-                print(f"Cleaning up raw file: {raw_video_path}")
+                logger.info(f"Cleaning up raw file: {raw_video_path}")
                 os.remove(raw_video_path)
-                print(f"✅ Final annotated video is ready at: {annotated_video_path}")
+                logger.info(f"✅ Final annotated video is ready at: {annotated_video_path}")
 
             except Exception as post_process_error:
-                print(f"Error during video post-processing: {post_process_error}")
+                logger.error(f"Error during video post-processing: {post_process_error}")
+
+
+@app.websocket("/ws/live_camera_analysis/{reference_video_id}")
+async def websocket_live_camera_analysis(websocket: WebSocket, reference_video_id: str):
+    """
+    WebSocket endpoint for live camera analysis with pose detection.
+
+    Features:
+    - Real-time pose detection from camera frames
+    - Session recording and storage
+    - Post-session analysis against reference video
+    - Live feedback with pose keypoints and confidence scores
+
+    Protocol:
+    1. Client connects and sends 'start' message
+    2. Client sends camera frames as binary data
+    3. Server processes frames and sends back pose analysis
+    4. Client sends 'stop' message to end session
+    5. Server performs analysis and returns results
+    """
+    await websocket.accept()
+    session = None
+
+    # Construct the path and check if the reference video exists
+    ref_video_path = os.path.join(REFERENCE_VIDEOS_DIR, reference_video_id)
+    if not os.path.isfile(ref_video_path):
+        await websocket.send_json({
+            "type": "error",
+            "message": f"Reference video not found: {reference_video_id}"
+        })
+        await websocket.close(code=1008, reason="Reference video not found")
+        return
+
+    try:
+        # Initialize the camera session
+        logger.info(f"🎥 Initializing LiveCameraSession for reference video: {reference_video_id}")
+        session = LiveCameraSession(OUTPUTS_DIR, ref_video_path)
+        logger.info(f"✅ Camera session initialized - Session ID: {session.session_id}")
+
+        await websocket.send_json({
+            "type": "session_initialized",
+            "session_id": session.session_id,
+            "message": f"Live camera session ready - ID: {session.session_id}"
+        })
+        logger.info("📤 Sent session_initialized message to client")
+
+        while True:
+            # Receive message from client
+            logger.debug("🔄 Waiting for message from client...")
+            message = await websocket.receive()
+
+            if message["type"] == "websocket.disconnect":
+                logger.info("📴 Client disconnected from camera session")
+                break
+
+            # Handle text messages (start/stop commands)
+            if message["type"] == "websocket.text":
+                data = json.loads(message["text"])
+                logger.info(f"📨 Received text message: {data}")
+
+                if data.get("action") == "start":
+                    logger.info("▶️ Starting camera session")
+                    session.start_session()
+                    logger.info("✅ Camera session started successfully")
+
+                    await websocket.send_json({
+                        "type": "session_started",
+                        "message": "Camera session started - send frames as binary data"
+                    })
+                    logger.info("📤 Sent session_started message to client")
+
+                elif data.get("action") == "stop":
+                    logger.info("⏹️ Stopping camera session")
+                    session_info = session.stop_session()
+                    logger.info(f"✅ Camera session stopped - {session_info}")
+
+                    await websocket.send_json({
+                        "type": "session_stopped",
+                        "session_info": session_info,
+                        "message": "Session stopped - analyzing..."
+                    })
+                    logger.info("📤 Sent session_stopped message to client")
+
+                    # Perform analysis
+                    logger.info("🔍 Starting session analysis...")
+                    analysis_result = session.analyze_session(ref_video_path)
+                    logger.info(f"✅ Session analysis completed: {analysis_result}")
+
+                    await websocket.send_json({
+                        "type": "analysis_complete",
+                        "result": analysis_result,
+                        "message": "Analysis complete!"
+                    })
+                    logger.info("📤 Sent analysis_complete message to client")
+                    break
+
+            # Handle binary data (camera frames)
+            elif message["type"] == "websocket.bytes":
+                if session and session.is_active:
+                    frame_bytes = message["bytes"]
+                    logger.debug(f"📸 Received frame - Size: {len(frame_bytes)} bytes")
+
+                    # Process frame
+                    logger.debug("⚙️ Processing camera frame...")
+                    result = session.process_frame(frame_bytes)
+                    logger.debug(f"✅ Frame processed - Result: {result}")
+
+                    if "error" not in result:
+                        # Send real-time feedback
+                        await websocket.send_json({
+                            "type": "frame_processed",
+                            "frame_info": result,
+                            "session_stats": {
+                                "total_frames": len(session.frames),
+                                "total_pose_data": len(session.pose_data),
+                                "duration": result.get("timestamp", 0)
+                            }
+                        })
+                        logger.debug("📤 Sent frame_processed message to client")
+                    else:
+                        logger.warning(f"⚠️ Frame processing error: {result['error']}")
+                        await websocket.send_json({
+                            "type": "frame_error",
+                            "error": result["error"]
+                        })
+                        logger.debug("📤 Sent frame_error message to client")
+
+    except WebSocketDisconnect:
+        logger.info("📴 Client disconnected from camera session")
+    except Exception as e:
+        logger.error(f"❌ Error in live camera session: {e}")
+        logger.debug(f"📋 Full traceback: {traceback.format_exc()}")
+        await websocket.send_json({
+            "type": "error",
+            "message": f"Server error: {str(e)}"
+        })
+        logger.error("📤 Sent error message to client")
+    finally:
+        # Clean up session
+        if session:
+            try:
+                logger.info("🧹 Starting camera session cleanup...")
+                session_info = session.stop_session()
+                logger.info(f"✅ Camera session cleanup completed: {session_info}")
+            except Exception as e:
+                logger.error(f"❌ Error during session cleanup: {e}")
+                logger.debug(f"📋 Cleanup error traceback: {traceback.format_exc()}")
 
 
 @app.get("/", summary="API Root", include_in_schema=False)
 def read_root():
     return {"message": "Welcome to the Pose Comparison API v2.0. See /docs for details."}
 
-
 if __name__ == "__main__":
-    print("🚀 Starting FastAPI server v2.0...")
-    print("Access http://127.0.0.1:8000/docs for the interactive API documentation.")
+    logger.info("🚀 Starting FastAPI server v2.0...")
+    logger.info("Access http://127.0.0.1:8000/docs for the interactive API documentation.")
     uvicorn.run(app, host="127.0.0.1", port=8000)

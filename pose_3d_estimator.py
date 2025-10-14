@@ -476,6 +476,8 @@ class Pose3DEstimator:
             # Save as JSON
             with open(json_path, 'w') as f:
                 json.dump(json_data, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
             
             save_time = time.time() - start_time
             

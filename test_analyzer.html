@@ -11,17 +11,18 @@
         #logs { border: 1px solid #ccc; padding: 1em; margin-top: 1em; height: 300px; overflow-y: scroll; background: #e9ecef; border-radius: 4px; }
         #result video { max-width: 100%; border-radius: 4px; margin-top: 1em; }
         #result a { font-weight: bold; color: #28a745; }
-        button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-right: 5px; }
         button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
         select, input[type="file"] { width: 100%; padding: 8px; margin-top: 5px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
         .hidden { display: none; }
         .form-section { margin-bottom: 1.5em; }
+        #webcam-preview { background: #000; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Analyze Your Pose Performance</h1>
-        <p>Upload a video of your performance to get an annotated video with feedback.</p>
         
         <form id="upload-form">
             <div class="form-section">
@@ -49,11 +50,16 @@
             </div>
 
             <div class="form-section">
-                <label for="user_video"><strong>2. Upload Your Performance Video:</strong></label>
-                <input type="file" id="user_video" name="user_video" accept="video/*" required>
+                <label><strong>2. Record Your Performance:</strong></label>
+                <video id="webcam-preview" width="100%" autoplay muted playsinline style="border: 1px solid #ccc;"></video>
+                <div>
+                    <button type="button" id="start-recording">Start Recording</button>
+                    <button type="button" id="stop-recording" disabled>Stop Recording</button>
+                </div>
             </div>
             
-            <button type="submit">Analyze</button>
+            <hr>
+            <button type="submit">Analyze Performance</button>
         </form>
 
         <h2>Processing Log</h2>
@@ -74,7 +80,17 @@
         const refVideoIdSelect = document.getElementById('reference_video_id');
         const refVideoInput = document.getElementById('reference_video');
 
+        const startBtn = document.getElementById('start-recording');
+        const stopBtn = document.getElementById('stop-recording');
+        const preview = document.getElementById('webcam-preview');
+        const analyzeBtn = document.querySelector('button[type="submit"]');
+
         const API_BASE_URL = 'http://127.0.0.1:8000';
+
+        let mediaRecorder;
+        let recordedChunks = [];
+        let recordedFile = null;
+        let webcamStream = null;
 
         // --- UI Logic ---
         refSelectRadio.addEventListener('change', () => {
@@ -95,7 +111,17 @@
             }
         });
 
-        // --- API Logic ---
+        // --- API & Webcam Logic ---
+        async function setupWebcam() {
+            try {
+                webcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                preview.srcObject = webcamStream;
+            } catch (error) {
+                console.error("Error accessing webcam:", error);
+                logsDiv.innerHTML = `Could not access webcam: ${error.message}. Please grant permission and refresh.`;
+            }
+        }
+
         async function loadReferenceVideos() {
             try {
                 const response = await fetch(`${API_BASE_URL}/api/reference_videos/`);
@@ -115,13 +141,56 @@
             }
         }
 
+        startBtn.addEventListener('click', () => {
+            if (!webcamStream) {
+                logsDiv.innerHTML = 'Webcam not available. Please grant permission and refresh.';
+                return;
+            }
+            recordedChunks = [];
+            mediaRecorder = new MediaRecorder(webcamStream, { mimeType: 'video/webm' });
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                recordedFile = new File([blob], 'performance.webm', { type: 'video/webm' });
+                logsDiv.innerHTML += '✅ Recording stopped. Ready to analyze.<br>';
+                analyzeBtn.disabled = false;
+            };
+
+            mediaRecorder.start();
+            logsDiv.innerHTML = '🔴 Recording started...<br>';
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            analyzeBtn.disabled = true;
+        });
+
+        stopBtn.addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+            }
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+        });
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            if (!recordedFile) {
+                logsDiv.innerHTML = 'Please record a performance video first.';
+                return;
+            }
+
             logsDiv.innerHTML = '';
             resultDiv.innerHTML = '';
 
             const formData = new FormData(form);
-            
+            formData.append('user_video', recordedFile);
+
             if (refSelectRadio.checked) {
                 formData.delete('reference_video');
             } else {
@@ -197,7 +266,11 @@
             }
         });
 
-        window.onload = loadReferenceVideos;
+        window.onload = () => {
+            loadReferenceVideos();
+            setupWebcam();
+            analyzeBtn.disabled = true;
+        };
     </script>
 </body>
 </html>

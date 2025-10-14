@@ -4,6 +4,10 @@ import mediapipe as mp
 from datetime import datetime
 import os
 import queue
+import logging
+import traceback
+
+logger = logging.getLogger(__name__)
 
 class PoseComparison:
     def __init__(self, reference_video_path):
@@ -286,6 +290,8 @@ class PoseComparison:
 
         self.ref_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # Rewind reference video
 
+        progress_queue.put({"type": "progress", "step": "processing_frames", "message": f"Processing {total_frames} frames...", "percentage": 20})
+
         try:
             for i in range(total_frames):
                 # Read frames
@@ -310,20 +316,23 @@ class PoseComparison:
                 # Write frame to output video
                 video_writer.write(display_frame)
 
-                # Report progress (e.g., every 30 frames)
-                if i % 30 == 0:
-                    progress_queue.put(f"Processed frame {i}/{total_frames}...")
-        
+                # Report detailed progress (every 10 frames for better UX)
+                if i % 10 == 0:
+                    progress_percentage = 20 + int((i / total_frames) * 70)  # 20-90% range for frame processing
+                    progress_message = f"Processed frame {i+1}/{total_frames} ({progress_percentage}%)"
+                    progress_queue.put({"type": "progress", "step": "processing_frames", "message": progress_message, "percentage": progress_percentage})
+
         except Exception as e:
             import traceback
-            progress_queue.put(f"ERROR: {str(e)}\n{traceback.format_exc()}")
+            progress_queue.put({"type": "error", "data": f"ERROR: {str(e)}\n{traceback.format_exc()}"})
 
         finally:
             # Release all resources
             user_cap.release()
             self.ref_cap.release()
             video_writer.release()
-            progress_queue.put(f"✅ Comparison video saved to {output_path}")
+            progress_queue.put({"type": "progress", "step": "saving_video", "message": "Saving comparison video...", "percentage": 95})
+            progress_queue.put({"type": "progress", "step": "completed", "message": f"✅ Comparison video saved to {output_path}", "percentage": 100})
 
     def annotate_video(self, raw_user_video_path: str, annotated_output_path: str):
         """
@@ -366,6 +375,9 @@ class PoseComparison:
                 ref_keypoints, ref_results = self._extract_keypoints(ref_frame)
                 _, wrong_keypoints = self._calculate_score(user_keypoints, ref_keypoints)
 
+                # --- DEBUGGING ---
+                print(f"Frame {i}: Found {len(wrong_keypoints)} wrong keypoints: {wrong_keypoints}")
+                
                 # Draw the advanced visualization on the user frame
                 annotated_frame = self._draw_pose(
                     user_frame,
@@ -478,15 +490,7 @@ class PoseComparison:
                 self._stop_recording()
             user_cap.release()
             self.ref_cap.release()
-            cv2.destroyAllWindows()
-
-# Usage
-if __name__ == "__main__":
-    # Replace with your reference video path
-    reference_video = "res/input/video.mp4"
-    
-    comparison = PoseComparison(reference_video)#truyền video đâu vào 
-    comparison.run(camera_index=0)
+            return self.output_path
 
 
 class LiveComparisonSession:
@@ -501,11 +505,11 @@ class LiveComparisonSession:
         """Starts the recording process for the user's performance."""
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         self.output_path = os.path.join(output_dir, f"live_session_{timestamp}.mp4")
-        
+
         # Assuming a standard webcam resolution for the output
         # The actual frame size will be used when writing the first frame.
         # Placeholder dimensions, will be updated.
-        self.width = 640 
+        self.width = 640
         self.height = 480
         fps = 20 # A reasonable default for webcam streams
 
@@ -565,8 +569,227 @@ class LiveComparisonSession:
             self.video_writer.release()
             self.is_recording = False
             print(f"✅ Live session recording saved: {self.output_path}")
-        
-        if self.comparison.ref_cap.isOpened():
-            self.comparison.ref_cap.release()
-            
+
         return self.output_path
+
+
+class LiveCameraSession:
+    """
+    Manages a live camera analysis session with real-time pose detection.
+    Records frames, processes pose detection, and provides final analysis.
+    """
+
+    def __init__(self, output_dir, reference_video_path=None):
+        logger.info(f"🎥 Initializing LiveCameraSession - Output dir: {output_dir}")
+        import uuid
+        import time
+
+        self.output_dir = output_dir
+        self.reference_video_path = reference_video_path
+        self.session_id = str(uuid.uuid4())
+        self.output_path = os.path.join(output_dir, f"camera_session_{self.session_id}.mp4")
+
+        # MediaPipe setup
+        logger.debug("🤖 Setting up MediaPipe pose detection...")
+        self.mp_pose = mp.solutions.pose
+        self.pose = self.mp_pose.Pose(
+            static_image_mode=False,
+            model_complexity=1,
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5
+        )
+        logger.debug("✅ MediaPipe pose detection initialized")
+
+        # Session data
+        self.frames = []
+        self.pose_data = []
+        self.timestamps = []
+        self.is_active = False
+        self.start_time = None
+
+        logger.info(f"✅ LiveCameraSession initialized - ID: {self.session_id}")
+
+    def start_session(self):
+        """Start the camera session"""
+        logger.info(f"▶️ Starting camera session - ID: {self.session_id}")
+        self.is_active = True
+        self.start_time = time.time()
+        logger.info("✅ Camera session started successfully")
+
+    def process_frame(self, frame_bytes):
+        """
+        Process a single frame from camera
+        Returns pose analysis results for real-time feedback
+        """
+        if not self.is_active:
+            logger.warning("⚠️ Attempted to process frame but session is not active")
+            return {"error": "Session not active"}
+
+        try:
+            # Convert bytes to numpy array
+            logger.debug(f"🔄 Converting {len(frame_bytes)} bytes to frame...")
+            nparr = np.frombuffer(frame_bytes, np.uint8)
+            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+            if frame is None:
+                logger.error("❌ Failed to decode frame from bytes")
+                return {"error": "Invalid frame data"}
+
+            # Get current timestamp
+            current_time = time.time() - self.start_time
+            logger.debug(f"⏱️ Frame timestamp: {current_time:.2f}s")
+
+            # Process pose detection
+            logger.debug("🤖 Processing pose detection...")
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            results = self.pose.process(frame_rgb)
+
+            frame_info = {
+                "timestamp": current_time,
+                "frame_shape": frame.shape,
+                "pose_detected": results.pose_landmarks is not None
+            }
+
+            # Store frame and pose data
+            self.frames.append(frame)
+            self.timestamps.append(current_time)
+            logger.debug(f"💾 Stored frame - Total frames: {len(self.frames)}")
+
+            if results.pose_landmarks:
+                # Extract keypoints
+                keypoints = []
+                for landmark in results.pose_landmarks.landmark:
+                    keypoints.extend([landmark.x, landmark.y, landmark.z])
+
+                self.pose_data.append({
+                    "timestamp": current_time,
+                    "keypoints": keypoints,
+                    "confidence": results.pose_landmarks.landmark[0].visibility if results.pose_landmarks.landmark else 0
+                })
+                logger.debug(f"🎯 Pose detected - Keypoints: {len(keypoints)//3}, Confidence: {results.pose_landmarks.landmark[0].visibility if results.pose_landmarks.landmark else 0:.3f}")
+
+                frame_info.update({
+                    "keypoints_count": len(keypoints) // 3,
+                    "confidence": results.pose_landmarks.landmark[0].visibility if results.pose_landmarks.landmark else 0
+                })
+            else:
+                logger.debug("❌ No pose detected in frame")
+                frame_info.update({
+                    "keypoints_count": 0,
+                    "confidence": 0
+                })
+
+            logger.debug(f"✅ Frame processing completed - {frame_info}")
+            return frame_info
+
+        except Exception as e:
+            logger.error(f"❌ Error processing frame: {str(e)}")
+            logger.debug(f"📋 Frame processing error traceback: {traceback.format_exc()}")
+            return {"error": str(e)}
+
+    def start_session(self):
+        """Start the camera session"""
+        logger.info(f"▶️ Starting camera session - ID: {self.session_id}")
+        self.is_active = True
+        self.start_time = time.time()
+        logger.info("✅ Camera session started successfully")
+
+    def stop_session(self):
+        """Stop the camera session and return recorded data"""
+        if not self.is_active:
+            logger.warning("⚠️ Attempted to stop session but session is not active")
+            return None
+
+        logger.info(f"⏹️ Stopping camera session - ID: {self.session_id}")
+        self.is_active = False
+        end_time = time.time()
+
+        session_info = {
+            "session_id": self.session_id,
+            "duration": end_time - self.start_time,
+            "total_frames": len(self.frames),
+            "total_pose_data": len(self.pose_data),
+            "avg_fps": len(self.frames) / (end_time - self.start_time) if self.frames else 0
+        }
+
+        logger.info(f"✅ Camera session stopped - Duration: {session_info['duration']:.2f}s, Frames: {session_info['total_frames']}, Pose Data: {session_info['total_pose_data']}")
+        return session_info
+
+    def save_session_video(self):
+        """Save the recorded session as a video file"""
+        if not self.frames:
+            logger.warning("⚠️ Attempted to save session video but no frames recorded")
+            return None
+
+        logger.info(f"💾 Saving session video - {len(self.frames)} frames to {self.output_path}")
+        try:
+            # Get frame dimensions
+            height, width = self.frames[0].shape[:2]
+            logger.debug(f"📹 Video dimensions: {width}x{height}")
+
+            # Create video writer
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            out = cv2.VideoWriter(self.output_path, fourcc, 20.0, (width, height))
+
+            # Write frames
+            for i, frame in enumerate(self.frames):
+                out.write(frame)
+                if i % 100 == 0:  # Log progress every 100 frames
+                    logger.debug(f"📹 Written {i}/{len(self.frames)} frames")
+
+            out.release()
+            logger.info(f"✅ Session video saved successfully: {self.output_path}")
+            return self.output_path
+
+        except Exception as e:
+            logger.error(f"❌ Error saving session video: {str(e)}")
+            logger.debug(f"📋 Video save error traceback: {traceback.format_exc()}")
+            return None
+
+    def analyze_session(self, reference_video_path=None):
+        """
+        Analyze the recorded session against a reference video
+        Returns comparison results
+        """
+        logger.info(f"🔍 Starting session analysis - Session ID: {self.session_id}")
+        ref_path = reference_video_path or self.reference_video_path
+        logger.info(f"📹 Reference video for analysis: {ref_path}")
+
+        try:
+            if not self.frames:
+                logger.error("❌ No frames recorded in session for analysis")
+                return {"error": "No frames recorded in session"}
+
+            # Save session video first
+            logger.info("💾 Saving session video before analysis...")
+            session_video_path = self.save_session_video()
+            if not session_video_path:
+                logger.error("❌ Failed to save session video for analysis")
+                return {"error": "Failed to save session video"}
+
+            # Use existing PoseComparison for analysis
+            logger.info("🤖 Initializing PoseComparison for analysis...")
+            comparison = PoseComparison(ref_path)
+            annotated_video_path = session_video_path.replace("camera_session_", "analyzed_session_")
+            logger.info(f"🎨 Creating annotated video: {annotated_video_path}")
+
+            # Create annotated video
+            comparison.annotate_video(session_video_path, annotated_video_path)
+            logger.info("✅ Session analysis completed successfully")
+
+            analysis_result = {
+                "session_id": self.session_id,
+                "original_session_video": session_video_path,
+                "annotated_video": annotated_video_path,
+                "total_frames": len(self.frames),
+                "duration": self.timestamps[-1] - self.timestamps[0] if self.timestamps else 0,
+                "pose_detections": len(self.pose_data)
+            }
+
+            logger.info(f"📊 Analysis result: {analysis_result}")
+            return analysis_result
+
+        except Exception as e:
+            logger.error(f"❌ Error analyzing session: {str(e)}")
+            logger.debug(f"📋 Analysis error traceback: {traceback.format_exc()}")
+            return {"error": str(e)}

@@ -1,0 +1,93 @@
+2025-10-13 13:21:41,935 - main_api - INFO - 📹 Saved temporary video to: uploads/457035e1-4d11-4016-af7e-fa557115be2c.mp4
+2025-10-13 13:21:41,941 - main_api - INFO - 📹 Saved temporary video to: uploads/6e978520-381e-44e6-859a-bc0eb5456959.mp4
+2025-10-13 13:24:51,674 - main_api - INFO - 🧹 Starting cleanup for 2 files...
+2025-10-13 13:24:51,675 - main_api - INFO - 🗑️ Deleted: uploads/457035e1-4d11-4016-af7e-fa557115be2c.mp4
+2025-10-13 13:24:51,676 - main_api - INFO - 🗑️ Deleted: uploads/6e978520-381e-44e6-859a-bc0eb5456959.mp4
+2025-10-13 13:29:24,335 - main_api - INFO - 📹 Saved temporary video to: uploads/441390ca-ad3a-41be-a7e4-4922e7c1b720.mp4
+2025-10-13 13:29:24,341 - main_api - INFO - 📹 Saved temporary video to: uploads/2732d169-cd14-4777-8a33-2e1c7bfd7ab6.mp4
+2025-10-13 13:32:26,433 - main_api - INFO - 🧹 Starting cleanup for 2 files...
+2025-10-13 13:32:26,434 - main_api - INFO - 🗑️ Deleted: uploads/441390ca-ad3a-41be-a7e4-4922e7c1b720.mp4
+2025-10-13 13:32:26,435 - main_api - INFO - 🗑️ Deleted: uploads/2732d169-cd14-4777-8a33-2e1c7bfd7ab6.mp4
+2025-10-13 13:33:11,426 - main_api - INFO - 📹 Saved temporary video to: uploads/9c086122-7ada-4cb9-b663-50ee64e3c80e.mp4
+2025-10-13 13:33:11,434 - main_api - INFO - 📹 Saved temporary video to: uploads/721991e3-fadc-4b82-922f-c83dca93886c.mp4
+2025-10-13 13:34:09,033 - main_api - INFO - 🧹 Starting cleanup for 2 files...
+2025-10-13 13:34:09,034 - main_api - INFO - 🗑️ Deleted: uploads/9c086122-7ada-4cb9-b663-50ee64e3c80e.mp4
+2025-10-13 13:34:09,035 - main_api - INFO - 🗑️ Deleted: uploads/721991e3-fadc-4b82-922f-c83dca93886c.mp4
+2025-10-13 13:36:58,411 - main_api - INFO - 📹 Saved temporary video to: uploads/56fc02a6-6db7-4c76-9c0e-b65d834205d1.mp4
+2025-10-13 13:36:58,414 - main_api - INFO - 📹 Saved temporary video to: uploads/62db4c45-a03a-44da-9aff-a7e6146e0ea0.mp4
+2025-10-13 13:37:48,374 - main_api - INFO - 🧹 Starting cleanup for 2 files...
+2025-10-13 13:37:48,380 - main_api - INFO - 🗑️ Deleted: uploads/56fc02a6-6db7-4c76-9c0e-b65d834205d1.mp4
+2025-10-13 13:37:48,381 - main_api - INFO - 🗑️ Deleted: uploads/62db4c45-a03a-44da-9aff-a7e6146e0ea0.mp4
+2025-10-13 13:38:50,192 - main_api - INFO - 📹 Saved temporary video to: uploads/0bf2bb61-f009-46b2-b59b-a4638c48f47f.mp4
+2025-10-13 13:38:50,197 - main_api - INFO - 📹 Saved temporary video to: uploads/38b080d3-2685-4c96-a6c1-9e075a5dc8e5.mp4
+2025-10-13 13:39:47,815 - main_api - INFO - 🧹 Starting cleanup for 2 files...
+2025-10-13 13:39:47,816 - main_api - INFO - 🗑️ Deleted: uploads/0bf2bb61-f009-46b2-b59b-a4638c48f47f.mp4
+2025-10-13 13:39:47,816 - main_api - INFO - 🗑️ Deleted: uploads/38b080d3-2685-4c96-a6c1-9e075a5dc8e5.mp4
+2025-10-13 13:43:08,686 - main_api - INFO - 📹 Saved temporary video to: uploads/793d712b-4755-4d80-98b9-bd83f11239c0.mp4
+2025-10-13 13:43:08,689 - main_api - INFO - 📹 Saved temporary video to: uploads/42a406fb-e5e0-47f1-afe6-2320a5d2fcff.mp4
+2025-10-13 13:43:08,692 - main_api - INFO - 🔄 Starting video comparison process...
+2025-10-13 13:43:08,693 - main_api - INFO -    📹 User video: uploads/793d712b-4755-4d80-98b9-bd83f11239c0.mp4
+2025-10-13 13:43:08,693 - main_api - INFO -    🎬 Reference video: uploads/42a406fb-e5e0-47f1-afe6-2320a5d2fcff.mp4
+2025-10-13 13:43:08,693 - main_api - INFO -    💾 Output: res/output/comparison_793d712b-4755-4d80-98b9-bd83f11239c0.mp4
+2025-10-13 13:43:08,693 - main_api - INFO - 🤖 Initializing PoseComparison...
+2025-10-13 13:43:08,922 - main_api - INFO - ⚙️ Processing video files and creating side-by-side comparison...
+2025-10-13 13:44:25,055 - main_api - INFO - ✅ Video comparison completed successfully!
+2025-10-13 13:44:25,056 - main_api - INFO -    📊 Side-by-side video saved to: res/output/comparison_793d712b-4755-4d80-98b9-bd83f11239c0.mp4
+2025-10-13 13:44:25,056 - main_api - INFO - 🏁 Video comparison thread finished
+2025-10-13 13:44:25,087 - main_api - INFO - 🧹 Starting cleanup for 2 files...
+2025-10-13 13:44:25,089 - main_api - INFO - 🗑️ Deleted: uploads/793d712b-4755-4d80-98b9-bd83f11239c0.mp4
+2025-10-13 13:44:25,090 - main_api - INFO - 🗑️ Deleted: uploads/42a406fb-e5e0-47f1-afe6-2320a5d2fcff.mp4
+2025-10-13 13:54:43,067 - main_api - ERROR - Error in live camera session: name 'LiveCameraSession' is not defined
+2025-10-13 13:54:48,928 - main_api - ERROR - Error in live camera session: name 'LiveCameraSession' is not defined
+2025-10-13 13:55:53,731 - main_api - ERROR - Error in live camera session: name 'LiveCameraSession' is not defined
+2025-10-13 14:06:35,358 - main_api - INFO - Client disconnected from camera session
+2025-10-13 14:06:35,359 - main_api - INFO - Camera session cleanup completed: None
+2025-10-13 14:06:35,359 - main_api - INFO - Client disconnected from camera session
+2025-10-13 14:06:35,360 - main_api - INFO - Camera session cleanup completed: None
+2025-10-13 14:08:29,481 - main_api - INFO - 🎥 Initializing LiveCameraSession for reference video: 56eb55ff-3a48-4ff2-b584-59932102b3c6.mp4
+2025-10-13 14:08:29,482 - pose_comparison - INFO - 🎥 Initializing LiveCameraSession - Output dir: res/output
+2025-10-13 14:08:29,685 - pose_comparison - INFO - ✅ LiveCameraSession initialized - ID: 672b48e7-c58d-43fd-aefb-d348507cdc2c
+2025-10-13 14:08:29,686 - main_api - INFO - ✅ Camera session initialized - Session ID: 672b48e7-c58d-43fd-aefb-d348507cdc2c
+2025-10-13 14:08:29,691 - main_api - INFO - 📤 Sent session_initialized message to client
+2025-10-14 07:24:29,868 - main_api - INFO - 📹 Saved temporary video to: uploads/72f3905d-fea8-4f92-894e-9d481260a74c.mp4
+2025-10-14 07:24:29,873 - main_api - INFO - 📹 Saved temporary video to: uploads/3d0222c6-f9bb-41f5-97a0-1d47098c52f5.mp4
+2025-10-14 07:24:29,875 - main_api - INFO - 🔄 Starting video comparison process...
+2025-10-14 07:24:29,876 - main_api - INFO -    📹 User video: uploads/72f3905d-fea8-4f92-894e-9d481260a74c.mp4
+2025-10-14 07:24:29,877 - main_api - INFO -    🎬 Reference video: uploads/3d0222c6-f9bb-41f5-97a0-1d47098c52f5.mp4
+2025-10-14 07:24:29,877 - main_api - INFO -    💾 Output: res/output/comparison_72f3905d-fea8-4f92-894e-9d481260a74c.mp4
+2025-10-14 07:24:29,877 - main_api - INFO - 🤖 Initializing PoseComparison...
+2025-10-14 07:24:30,141 - main_api - INFO - ⚙️ Processing video files and creating side-by-side comparison...
+2025-10-14 07:27:19,115 - main_api - INFO - ✅ Video comparison completed successfully!
+2025-10-14 07:27:19,115 - main_api - INFO -    📊 Side-by-side video saved to: res/output/comparison_72f3905d-fea8-4f92-894e-9d481260a74c.mp4
+2025-10-14 07:27:19,116 - main_api - INFO - 🏁 Video comparison thread finished
+2025-10-14 07:27:19,163 - main_api - INFO - 🧹 Starting cleanup for 2 files...
+2025-10-14 07:27:19,165 - main_api - INFO - 🗑️ Deleted: uploads/72f3905d-fea8-4f92-894e-9d481260a74c.mp4
+2025-10-14 07:27:19,166 - main_api - INFO - 🗑️ Deleted: uploads/3d0222c6-f9bb-41f5-97a0-1d47098c52f5.mp4
+2025-10-14 07:46:44,696 - main_api - INFO - 📹 Saved temporary video to: uploads/f7740cbc-056e-438c-bf1a-33462f2bdd21.mp4
+2025-10-14 07:46:44,702 - main_api - INFO - 📹 Saved temporary video to: uploads/a66dc324-12e8-4085-8b46-e901c7215fea.mp4
+2025-10-14 07:46:44,704 - main_api - INFO - 🔄 Starting video comparison process...
+2025-10-14 07:46:44,705 - main_api - INFO -    📹 User video: uploads/f7740cbc-056e-438c-bf1a-33462f2bdd21.mp4
+2025-10-14 07:46:44,705 - main_api - INFO -    🎬 Reference video: uploads/a66dc324-12e8-4085-8b46-e901c7215fea.mp4
+2025-10-14 07:46:44,706 - main_api - INFO -    💾 Output: res/output/comparison_f7740cbc-056e-438c-bf1a-33462f2bdd21.mp4
+2025-10-14 07:46:44,706 - main_api - INFO - 🤖 Initializing PoseComparison...
+2025-10-14 07:46:44,930 - main_api - INFO - ⚙️ Processing video files and creating side-by-side comparison...
+2025-10-14 07:49:23,905 - main_api - INFO - ✅ Video comparison completed successfully!
+2025-10-14 07:49:23,906 - main_api - INFO -    📊 Side-by-side video saved to: res/output/comparison_f7740cbc-056e-438c-bf1a-33462f2bdd21.mp4
+2025-10-14 07:49:23,906 - main_api - INFO - 🏁 Video comparison thread finished
+2025-10-14 07:49:23,940 - main_api - INFO - 🧹 Starting cleanup for 2 files...
+2025-10-14 07:49:23,942 - main_api - INFO - 🗑️ Deleted: uploads/f7740cbc-056e-438c-bf1a-33462f2bdd21.mp4
+2025-10-14 07:49:23,944 - main_api - INFO - 🗑️ Deleted: uploads/a66dc324-12e8-4085-8b46-e901c7215fea.mp4
+2025-10-14 07:55:52,787 - main_api - INFO - 📹 Saved temporary video to: uploads/5871ca27-0a07-4852-94dc-1697d5809237.mp4
+2025-10-14 07:55:52,790 - main_api - INFO - 📹 Saved temporary video to: uploads/0c2b0fdf-eb04-4383-bb90-07b8a7c30dae.mp4
+2025-10-14 07:55:52,792 - main_api - INFO - 🔄 Starting video comparison process...
+2025-10-14 07:55:52,792 - main_api - INFO -    📹 User video: uploads/5871ca27-0a07-4852-94dc-1697d5809237.mp4
+2025-10-14 07:55:52,793 - main_api - INFO -    🎬 Reference video: uploads/0c2b0fdf-eb04-4383-bb90-07b8a7c30dae.mp4
+2025-10-14 07:55:52,793 - main_api - INFO -    💾 Output: res/output/comparison_5871ca27-0a07-4852-94dc-1697d5809237.mp4
+2025-10-14 07:55:52,793 - main_api - INFO - 🤖 Initializing PoseComparison...
+2025-10-14 07:55:53,061 - main_api - INFO - ⚙️ Processing video files and creating side-by-side comparison...
+2025-10-14 07:56:51,134 - main_api - INFO - ✅ Video comparison completed successfully!
+2025-10-14 07:56:51,134 - main_api - INFO -    📊 Side-by-side video saved to: res/output/comparison_5871ca27-0a07-4852-94dc-1697d5809237.mp4
+2025-10-14 07:56:51,134 - main_api - INFO - 🏁 Video comparison thread finished
+2025-10-14 07:56:51,164 - main_api - INFO - 🧹 Starting cleanup for 2 files...
+2025-10-14 07:56:51,165 - main_api - INFO - 🗑️ Deleted: uploads/5871ca27-0a07-4852-94dc-1697d5809237.mp4
+2025-10-14 07:56:51,166 - main_api - INFO - 🗑️ Deleted: uploads/0c2b0fdf-eb04-4383-bb90-07b8a7c30dae.mp4
