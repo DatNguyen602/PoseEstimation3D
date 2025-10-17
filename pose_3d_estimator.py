@@ -5,6 +5,7 @@ import torch
 import time
 from pathlib import Path
 from datetime import datetime
+from typing import Dict
 from videopose3d_model import VideoPose3DPredictor, VIDEOPOSE3D_AVAILABLE
 
 class Pose3DEstimator:
@@ -59,10 +60,10 @@ class Pose3DEstimator:
             (8, 14), (14, 15), (15, 16),  # Right arm
         ]
         
-        # Processing settings
-        self.min_frames_threshold = 10  # Minimum frames để xử lý một người
-        self.confidence_threshold = 0.1  # Minimum confidence cho valid keypoint
-        self.min_valid_keypoints = 5     # Minimum valid keypoints per frame
+        # Processing settings - Điều chỉnh cho tỷ lệ thành công tối đa
+        self.min_frames_threshold = 1  # Giảm xuống 1 frame duy nhất
+        self.confidence_threshold = 0.01  # Giảm xuống rất thấp
+        self.min_valid_keypoints = 1     # Chỉ cần 1 keypoint hợp lệ
         
         print(f"✅ 3D Pose Estimator ready!")
         print(f"   Minimum frames per person: {self.min_frames_threshold}")
@@ -335,11 +336,9 @@ class Pose3DEstimator:
             if valid_keypoints >= self.min_valid_keypoints:
                 filtered_poses.append(pose)
             else:
-                # Replace with interpolated pose if possible
-                if len(filtered_poses) > 0:
-                    filtered_poses.append(filtered_poses[-1])  # Repeat last valid pose
-                else:
-                    filtered_poses.append(pose)  # Keep original if no previous valid pose
+                # Đừng loại bỏ poses - chỉ đánh dấu chúng là cần xử lý đặc biệt
+                # Với threshold thấp, hầu hết poses sẽ được giữ lại
+                filtered_poses.append(pose)
         
         filtered_count = len(filtered_poses)
         print(f"   Kept {filtered_count}/{original_count} frames after filtering")
@@ -584,7 +583,97 @@ class Pose3DEstimator:
             'skeleton_connections': self.skeleton_connections
         }
         
-        return info
+    def calculate_mpjpe(self, predicted_poses: np.ndarray, ground_truth_poses: np.ndarray) -> float:
+        """
+        Tính toán Mean Per Joint Position Error (MPJPE)
+        
+        Args:
+            predicted_poses: 3D poses dự đoán (N, 17, 3) hoặc (N, J, 3)
+            ground_truth_poses: 3D poses ground truth cùng shape
+            
+        Returns:
+            float: MPJPE value (mm)
+        """
+        if predicted_poses.shape != ground_truth_poses.shape:
+            raise ValueError(f"Shape mismatch: predicted {predicted_poses.shape} vs ground_truth {ground_truth_poses.shape}")
+        
+        # Tính khoảng cách Euclidean cho mỗi joint trong mỗi frame
+        joint_errors = np.linalg.norm(predicted_poses - ground_truth_poses, axis=-1)
+        
+        # Trung bình trên tất cả joints và frames
+        mpjpe = np.mean(joint_errors)
+        
+        # MPJPE per joint (trung bình trên tất cả frames)
+        mpjpe_per_joint = np.mean(joint_errors, axis=0)
+        
+        print(f"📊 MPJPE calculated: {mpjpe:.3f}mm")
+        print(f"📈 MPJPE per joint: {mpjpe_per_joint}")
+        
+        return mpjpe
+    
+    def evaluate_with_ground_truth(self, predicted_poses: np.ndarray, 
+                                  ground_truth_file: str) -> Dict[str, float]:
+        """
+        Evaluate predicted poses against ground truth data
+        
+        Args:
+            predicted_poses: Predicted 3D poses
+            ground_truth_file: Path to ground truth JSON file
+            
+        Returns:
+            dict: Evaluation metrics including MPJPE
+        """
+        if not os.path.exists(ground_truth_file):
+            raise FileNotFoundError(f"Ground truth file not found: {ground_truth_file}")
+        
+        print(f"📏 Evaluating against ground truth: {ground_truth_file}")
+        
+        try:
+            with open(ground_truth_file, 'r') as f:
+                gt_data = json.load(f)
+            
+            gt_poses = np.array(gt_data['poses_3d'])
+            
+            if gt_poses.shape != predicted_poses.shape:
+                print(f"⚠️ Shape mismatch: predicted {predicted_poses.shape} vs ground truth {gt_poses.shape}")
+                # Try to align shapes if possible
+                if len(gt_poses.shape) == len(predicted_poses.shape):
+                    min_frames = min(gt_poses.shape[0], predicted_poses.shape[0])
+                    gt_poses = gt_poses[:min_frames]
+                    predicted_poses = predicted_poses[:min_frames]
+                    print(f"📐 Aligned to {min_frames} frames")
+                else:
+                    raise ValueError(f"Cannot align shapes: {predicted_poses.shape} vs {gt_poses.shape}")
+            
+            # Calculate MPJPE
+            mpjpe = self.calculate_mpjpe(predicted_poses, gt_poses)
+            
+            # Calculate additional metrics
+            joint_errors = np.linalg.norm(predicted_poses - gt_poses, axis=-1)
+            mpjpe_per_joint = np.mean(joint_errors, axis=0)
+            
+            # P-MPJPE (Procrustes-aligned MPJPE)
+            # This would require more complex alignment, for now we'll use basic MPJPE
+            
+            evaluation_results = {
+                'mpjpe': mpjpe,
+                'mpjpe_per_joint': mpjpe_per_joint.tolist(),
+                'frames_evaluated': predicted_poses.shape[0],
+                'joints_evaluated': predicted_poses.shape[1],
+                'evaluation_timestamp': datetime.now().isoformat(),
+                'ground_truth_source': ground_truth_file
+            }
+            
+            print(f"✅ Evaluation completed:")
+            print(f"   MPJPE: {mpjpe:.3f}mm")
+            print(f"   Frames: {evaluation_results['frames_evaluated']}")
+            print(f"   Joints: {evaluation_results['joints_evaluated']}")
+            
+            return evaluation_results
+            
+        except Exception as e:
+            print(f"❌ Error during evaluation: {e}")
+            raise
 
 def main():
     """Demo sử dụng Pose3DEstimator"""

@@ -33,7 +33,7 @@ def setup_videopose3d_path():
 # Setup VideoPose3D
 VIDEOPOSE3D_AVAILABLE, VIDEOPOSE3D_PATH = setup_videopose3d_path()
 
-# Import VideoPose3D modules
+# Import VideoPose3D modules với error handling
 if VIDEOPOSE3D_AVAILABLE:
     try:
         from VideoPose3D.common.model import TemporalModel
@@ -46,13 +46,27 @@ if VIDEOPOSE3D_AVAILABLE:
         print(f"   - Camera utilities: Available") 
         print(f"   - Loss functions: Available")
         
+        VIDEOPOSE3D_MODULES_AVAILABLE = True
+        
     except ImportError as e:
         print(f"⚠️ Import error from VideoPose3D: {e}")
         print(f"Please check VideoPose3D installation:")
         print(f"1. Ensure repository is properly cloned")
         print(f"2. Check common/ directory exists")
         print(f"3. Verify Python path setup")
+        print(f"4. Check for missing dependencies (torch, numpy, etc.)")
         VIDEOPOSE3D_AVAILABLE = False
+        VIDEOPOSE3D_MODULES_AVAILABLE = False
+        TemporalModel = None
+        normalize_screen_coordinates = None
+        mpjpe = None
+        p_mpjpe = None
+else:
+    VIDEOPOSE3D_MODULES_AVAILABLE = False
+    TemporalModel = None
+    normalize_screen_coordinates = None
+    mpjpe = None
+    p_mpjpe = None
 
 class VideoPose3DPredictor:
     """
@@ -68,8 +82,8 @@ class VideoPose3DPredictor:
             device: PyTorch device (auto-detect if None)
             architecture: Model architecture (default: [3,3,3,3,3])
         """
-        if not VIDEOPOSE3D_AVAILABLE:
-            raise RuntimeError("VideoPose3D repository not found! Please clone the official repository.")
+        if not VIDEOPOSE3D_MODULES_AVAILABLE:
+            raise RuntimeError("VideoPose3D modules not available! Please check VideoPose3D installation and dependencies.")
         
         self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.architecture = architecture or [3, 3, 3, 3, 3]
@@ -212,6 +226,9 @@ class VideoPose3DPredictor:
         Returns:
             3D poses array (num_frames, num_joints, 3) - SAME LENGTH as input
         """
+        if not VIDEOPOSE3D_MODULES_AVAILABLE:
+            raise RuntimeError("VideoPose3D modules not available for prediction")
+            
         if len(poses_2d) == 0:
             raise ValueError("Empty poses_2d array")
         
@@ -419,8 +436,8 @@ def test_videopose3d():
     """Test VideoPose3D với dummy data"""
     print("🧪 Testing VideoPose3D integration...")
     
-    if not VIDEOPOSE3D_AVAILABLE:
-        print("❌ VideoPose3D not available for testing")
+    if not VIDEOPOSE3D_MODULES_AVAILABLE:
+        print("❌ VideoPose3D modules not available for testing")
         return False
     
     try:

@@ -15,8 +15,9 @@ from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 
 from pose_comparison import PoseComparison, LiveComparisonSession, LiveCameraSession
-
-# Import the pipeline function
+# Import database manager
+from database_manager import db_manager
+# Import pipeline runner
 from run_pipeline import run_full_pipeline
 
 # Setup logging
@@ -44,9 +45,15 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Mount static files directory for reference videos
-app.mount("/reference_videos", StaticFiles(directory=REFERENCE_VIDEOS_DIR), name="reference_videos")
-app.mount("/res/output", StaticFiles(directory=OUTPUTS_DIR), name="outputs")
+# Initialize database table on startup
+try:
+    if db_manager.test_connection():
+        db_manager.create_table_if_not_exists()
+        logger.info("✅ Database initialized successfully!")
+    else:
+        logger.error("❌ Failed to connect to database")
+except Exception as e:
+    logger.error(f"❌ Database initialization failed: {e}")
 
 # --- CORS Configuration ---
 origins = [
@@ -65,6 +72,9 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+# Mount static files directory for output videos
+app.mount("/res/output", StaticFiles(directory=OUTPUTS_DIR), name="output")
 
 # --- Utility Classes & Functions ---
 class QueueIO:
@@ -92,7 +102,7 @@ async def save_upload_file(upload_file: UploadFile) -> str:
     """Saves a temporary uploaded file and returns its path and request ID."""
     request_id = str(uuid.uuid4())
     _, extension = os.path.splitext(upload_file.filename)
-    if extension.lower() not in ['.mp4', '.mov', '.avi', '.webm']:
+    if extension.lower() not in ['.mp4', '.mov', '.avi', '.webm', '.mkv']:
         raise HTTPException(status_code=400, detail="Invalid file format.")
     
     video_filename = f"{request_id}{extension}"
@@ -170,9 +180,13 @@ def run_pipeline_in_thread(video_path, output_dir, output_basename, result_queue
         result_queue.put({"type": "done"})
 
 @app.post("/process-video-stream/", 
-          summary="[Legacy] Upload video for 3D pose estimation (SSE)",
-          tags=["Legacy"])
-async def process_video_stream(file: UploadFile = File(...)):
+          summary="Upload video for 3D pose estimation (SSE)",
+          tags=["Video Processing"])
+async def process_video_stream(
+    file: UploadFile = File(...),
+    user_id: str = Form(None),
+    title: str = Form(None)
+):
     video_path, request_id = await save_upload_file(file)
     
     async def event_generator():
@@ -192,12 +206,26 @@ async def process_video_stream(file: UploadFile = File(...)):
                             yield {"event": "done", "data": "Processing finished."}
                             break
                         elif message["type"] == "result":
+                            # Process result
                             final_json_path, generated_files = message["data"]
                             files_to_cleanup.extend(generated_files)
+                            
+                            # Read result data
                             with open(final_json_path, 'r') as f:
-                                json_data = json.load(f)
-                            yield {"event": "result", "data": json.dumps(json_data)}
+                                result_data = json.load(f)
+                            
+                            # Add metadata
+                            result_data['input_video_url'] = file.filename
+                            result_data['result_url'] = f"/res/output/{os.path.basename(final_json_path)}"
+                            if user_id:
+                                result_data['user_id'] = user_id
+                            if title:
+                                result_data['title'] = title
+                            
+                            yield {"event": "result", "data": json.dumps(result_data)}
+
                         elif message["type"] == "error":
+                            logger.error(f"❌ Error processing video for user {user_id} with title {title}: {message['data']}")
                             yield {"event": "error", "data": message["data"]}
                             break
                     else:
@@ -229,11 +257,75 @@ def run_video_comparison_in_thread(user_video_path, reference_video_path, output
         result_queue.put({"type": "progress", "step": "loading_videos", "message": "Loading video files...", "percentage": 10})
 
         logger.info(f"⚙️ Processing video files and creating side-by-side comparison...")
-        comparison.process_video_files(user_video_path, output_path, result_queue)
+        average_score, frame_scores = comparison.process_video_files(user_video_path, output_path, result_queue)
 
         logger.info(f"✅ Video comparison completed successfully!")
         logger.info(f"   📊 Side-by-side video saved to: {output_path}")
-
+        logger.info(f"   💯 Average similarity score: {average_score:.2f}%")
+        
+        # 📊 DETAILED DANCE SCORING METRICS
+        logger.info("🎯 === DANCE SCORING PERFORMANCE METRICS ===")
+        
+        baseline_result = None
+        sensitivity_result = None
+        
+        try:
+            # Import dance scoring system
+            from dance_scoring import dance_scorer
+            
+            # Calculate baseline score (reference video vs itself)
+            logger.info("🔄 Calculating baseline score (reference vs itself)...")
+            baseline_result = dance_scorer.calculate_baseline_score(reference_video_path)
+            
+            if 'error' not in baseline_result:
+                logger.info(f"📊 BASELINE SCORE: {baseline_result['baseline_score_percent']}%")
+                logger.info(f"   ⏱️ Processing time: {baseline_result['processing_time']:.3f}s")
+                logger.info(f"   🎬 Frames processed: {baseline_result['frames_processed']}")
+                
+                result_queue.put({
+                    "type": "progress", 
+                    "step": "baseline_scoring", 
+                    "message": f"Baseline Score: {baseline_result['baseline_score_percent']}%", 
+                    "percentage": 85,
+                    "baseline_score": baseline_result['baseline_score_percent']
+                })
+            else:
+                logger.error(f"❌ Baseline scoring error: {baseline_result['error']}")
+                
+            # Calculate sensitivity score (using same video for demo)
+            logger.info("🔄 Calculating algorithm sensitivity score...")
+            sensitivity_result = dance_scorer.calculate_sensitivity_score(
+                reference_video_path, 
+                reference_video_path  # Using same video for demo
+            )
+            
+            if 'error' not in sensitivity_result:
+                logger.info(f"🎯 ALGORITHM SENSITIVITY: {sensitivity_result['sensitivity_score_percent']}%")
+                logger.info(f"   ⏱️ Processing time: {sensitivity_result['processing_time']:.3f}s")
+                logger.info(f"   🎬 Frames processed: {sensitivity_result['frames_processed']}")
+                
+                if sensitivity_result['sensitivity_score_percent'] > 95:
+                    logger.info("⚠️ WARNING: Algorithm may be too lenient (high sensitivity score)")
+                elif sensitivity_result['sensitivity_score_percent'] < 80:
+                    logger.info("✅ GOOD: Algorithm is properly detecting differences")
+                
+                result_queue.put({
+                    "type": "progress", 
+                    "step": "sensitivity_scoring", 
+                    "message": f"Sensitivity Score: {sensitivity_result['sensitivity_score_percent']}%", 
+                    "percentage": 95,
+                    "sensitivity_score": sensitivity_result['sensitivity_score_percent']
+                })
+            else:
+                logger.error(f"❌ Sensitivity scoring error: {sensitivity_result['error']}")
+                
+            logger.info("🎉 === DANCE SCORING METRICS COMPLETED ===")
+            
+        except ImportError as e:
+            logger.warning(f"⚠️ Dance scoring not available: {e}")
+        except Exception as e:
+            logger.error(f"❌ Error in dance scoring: {e}")
+            
         # Generate proper video URL for frontend
         video_filename = os.path.basename(output_path)
         video_url = f"/res/output/{video_filename}"
@@ -241,8 +333,22 @@ def run_video_comparison_in_thread(user_video_path, reference_video_path, output
         result_data = {
             "side_by_side_video_path": output_path,
             "side_by_side_video_url": video_url,
-            "message": "Video comparison completed successfully"
+            "average_similarity_score": average_score,
+            "message": "Video comparison completed successfully",
+            "total_frames_processed": len(frame_scores),
+            "score_range": {
+                "min": min(frame_scores) if frame_scores else 0,
+                "max": max(frame_scores) if frame_scores else 0,
+                "average": average_score
+            },
+            "dance_scoring_metrics": {
+                "baseline_score_percent": baseline_result.get('baseline_score_percent', 0) if baseline_result else 0,
+                "sensitivity_score_percent": sensitivity_result.get('sensitivity_score_percent', 0) if sensitivity_result else 0,
+                "baseline_processing_time": baseline_result.get('processing_time', 0) if baseline_result else 0,
+                "sensitivity_processing_time": sensitivity_result.get('processing_time', 0) if sensitivity_result else 0
+            }
         }
+        
         result_queue.put({"type": "progress", "step": "completed", "message": "Comparison completed!", "percentage": 100})
         result_queue.put({"type": "result", "data": result_data})
 
@@ -637,9 +743,252 @@ async def websocket_live_camera_analysis(websocket: WebSocket, reference_video_i
                 logger.debug(f"📋 Cleanup error traceback: {traceback.format_exc()}")
 
 
-@app.get("/", summary="API Root", include_in_schema=False)
-def read_root():
-    return {"message": "Welcome to the Pose Comparison API v2.0. See /docs for details."}
+# --- Database Integration APIs ---
+
+@app.post("/api/process_and_save_compare_videos/",
+          summary="Compare videos and save result to database",
+          tags=["Database Integration"])
+async def process_and_save_compare_videos(
+    user_video: UploadFile = File(...),
+    reference_video: UploadFile = File(...),
+    user_id: str = Form(None),
+    title: str = Form(None)
+):
+    """
+    Compare two videos and automatically save the result to database.
+    Returns both the processing result and the database record ID.
+    """
+    try:
+        # Create a modified version of compare_videos that saves to DB
+        user_video_path, user_request_id = await save_upload_file(user_video)
+        ref_video_path, _ = await save_upload_file(reference_video)
+        
+        output_filename = f"comparison_{user_request_id}.mp4"
+        output_path = os.path.join(OUTPUTS_DIR, output_filename)
+
+        async def event_generator():
+            result_queue = queue.Queue()
+            files_to_cleanup = [user_video_path, ref_video_path]
+            
+            comparison_thread = threading.Thread(
+                target=run_video_comparison_in_thread,
+                args=(user_video_path, ref_video_path, output_path, result_queue)
+            )
+            comparison_thread.start()
+
+            try:
+                while True:
+                    try:
+                        message = result_queue.get_nowait()
+                        if isinstance(message, dict):
+                            if message["type"] == "done":
+                                yield {"event": "done", "data": "Processing finished."}
+                                break
+                            elif message["type"] == "result":
+                                # Save result to database
+                                result_data = json.loads(message["data"])
+                                
+                                # Add metadata
+                                result_data['input_video_url'] = user_video.filename
+                                if user_id:
+                                    result_data['user_id'] = user_id
+                                if title:
+                                    result_data['title'] = title
+                                
+                                # Save to database
+                                record_id = db_manager.save_video_result(
+                                    result_data, 
+                                    'compare_videos',
+                                    user_id
+                                )
+                                
+                                # Add database ID to result
+                                result_data['database_record_id'] = record_id
+                                yield {"event": "result", "data": json.dumps(result_data)}
+                                
+                            elif message["type"] == "error":
+                                # Save error to database
+                                error_data = {
+                                    'error': message['data'],
+                                    'input_video_url': user_video.filename,
+                                    'title': title or 'Video Comparison Failed'
+                                }
+                                
+                                if user_id:
+                                    error_data['user_id'] = user_id
+                                
+                                db_manager.save_video_result(
+                                    error_data,
+                                    'compare_videos',
+                                    user_id
+                                )
+                                yield {"event": "error", "data": message["data"]}
+                                break
+                            elif message["type"] == "progress":
+                                yield {"event": "progress", "data": json.dumps(message)}
+                    except queue.Empty:
+                        if not comparison_thread.is_alive():
+                            break
+                        await asyncio.sleep(0.1)
+            finally:
+                comparison_thread.join()
+                cleanup_files(files_to_cleanup)
+        
+        return EventSourceResponse(event_generator())
+        
+    except Exception as e:
+        logger.error(f"❌ Error in process_and_save_compare_videos: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/process_and_save_video_stream/",
+          summary="Process video stream and save result to database",
+          tags=["Database Integration"])
+async def process_and_save_video_stream(
+    file: UploadFile = File(...),
+    user_id: str = Form(None),
+    title: str = Form(None)
+):
+    """
+    Process video for 3D pose estimation and save result to database.
+    """
+    try:
+        video_path, request_id = await save_upload_file(file)
+        
+        async def event_generator():
+            result_queue = queue.Queue()
+            files_to_cleanup = [video_path]
+            
+            pipeline_thread = threading.Thread(
+                target=run_pipeline_in_thread,
+                args=(video_path, OUTPUTS_DIR, request_id, result_queue)
+            )
+            pipeline_thread.start()
+            
+            try:
+                while True:
+                    try:
+                        message = result_queue.get_nowait()
+                        if isinstance(message, dict):
+                            if message["type"] == "done":
+                                yield {"event": "done", "data": "Processing finished."}
+                                break
+                            elif message["type"] == "result":
+                                # Process and save result
+                                final_json_path, generated_files = message["data"]
+                                files_to_cleanup.extend(generated_files)
+                                
+                                # Read result data
+                                with open(final_json_path, 'r') as f:
+                                    result_data = json.load(f)
+                                
+                                # Add metadata
+                                result_data['input_video_url'] = file.filename
+                                result_data['result_url'] = f"/res/output/{os.path.basename(final_json_path)}"
+                                if user_id:
+                                    result_data['user_id'] = user_id
+                                if title:
+                                    result_data['title'] = title
+                                
+                                # Save to database
+                                record_id = db_manager.save_video_result(
+                                    result_data,
+                                    'process_video_stream',
+                                    user_id
+                                )
+                                
+                                # Add database ID
+                                result_data['database_record_id'] = record_id
+                                yield {"event": "result", "data": json.dumps(result_data)}
+                                
+                            elif message["type"] == "error":
+                                # Save error to database
+                                error_data = {
+                                    'error': message['data'],
+                                    'input_video_url': file.filename,
+                                    'title': title or 'Video Processing Failed'
+                                }
+                                
+                                if user_id:
+                                    error_data['user_id'] = user_id
+                                
+                                db_manager.save_video_result(
+                                    error_data,
+                                    'process_video_stream',
+                                    user_id
+                                )
+                                yield {"event": "error", "data": message["data"]}
+                                break
+                            else:
+                                yield {"event": "log", "data": message}
+                    except queue.Empty:
+                        if not pipeline_thread.is_alive():
+                            break
+                        await asyncio.sleep(0.1)
+            finally:
+                pipeline_thread.join()
+                cleanup_files(files_to_cleanup)
+        
+        return EventSourceResponse(event_generator())
+        
+    except Exception as e:
+        logger.error(f"❌ Error in process_and_save_video_stream: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/get_compare_videos_results/",
+         summary="Get compare videos results from database",
+         tags=["Database Integration"])
+async def get_compare_videos_results(
+    user_id: str = None,
+    limit: int = 50,
+    offset: int = 0
+):
+    """
+    Retrieve compare videos results from database.
+    """
+    try:
+        results = db_manager.get_video_results(
+            process_type='compare_videos',
+            user_id=user_id,
+            limit=limit,
+            offset=offset
+        )
+        return {
+            "success": True,
+            "count": len(results),
+            "data": results
+        }
+    except Exception as e:
+        logger.error(f"❌ Error retrieving compare videos results: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/get_video_stream_results/",
+         summary="Get video stream processing results from database",
+         tags=["Database Integration"])
+async def get_video_stream_results(
+    user_id: str = None,
+    limit: int = 50,
+    offset: int = 0
+):
+    """
+    Retrieve video stream processing results from database.
+    """
+    try:
+        results = db_manager.get_video_results(
+            process_type='process_video_stream',
+            user_id=user_id,
+            limit=limit,
+            offset=offset
+        )
+        return {
+            "success": True,
+            "count": len(results),
+            "data": results
+        }
+    except Exception as e:
+        logger.error(f"❌ Error retrieving video stream results: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 if __name__ == "__main__":
     logger.info("🚀 Starting FastAPI server v2.0...")

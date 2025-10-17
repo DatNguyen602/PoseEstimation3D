@@ -1,13 +1,15 @@
 import cv2
 import numpy as np
 import mediapipe as mp
-from datetime import datetime
-import os
-import queue
+from typing import List, Tuple, Optional, Dict, Any
 import logging
+import math
 import traceback
-
-logger = logging.getLogger(__name__)
+import subprocess
+import shutil
+import os
+import uuid
+from datetime import datetime
 
 class PoseComparison:
     def __init__(self, reference_video_path):
@@ -23,7 +25,8 @@ class PoseComparison:
         
         # Load reference video
         self.reference_video_path = reference_video_path
-        self.ref_cap = cv2.VideoCapture(reference_video_path) # duong dan video 
+        self.ref_cap = cv2.VideoCapture(reference_video_path)
+        self.logger = logging.getLogger(__name__) # duong dan video 
         self.ref_fps = self.ref_cap.get(cv2.CAP_PROP_FPS)
         
         # Get video info
@@ -94,25 +97,26 @@ class PoseComparison:
         h, w, _ = frame.shape
 
         # 1. Draw the reference pose "ghost" first (if provided)
-        if ghost_results and ghost_results.pose_landmarks:
-            ghost_color = (220, 220, 220)  # Light grey for the ghost
-            ghost_landmarks = ghost_results.pose_landmarks.landmark
-            
-            # Create a transparent overlay for the ghost
-            overlay = frame.copy()
-            alpha = 0.4 # Transparency factor
-
-            for connection in self.mp_pose.POSE_CONNECTIONS:
-                start_idx, end_idx = connection
-                start = ghost_landmarks[start_idx]
-                end = ghost_landmarks[end_idx]
-                
-                if start.visibility > 0.5 and end.visibility > 0.5:
-                    start_point = (int(start.x * w), int(start.y * h))
-                    end_point = (int(end.x * w), int(end.y * h))
-                    cv2.line(overlay, start_point, end_point, ghost_color, 2)
-            
-            frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
+        # COMMENTED OUT TO FIX GRAY BLURRY FRAMES ISSUE
+        # if ghost_results and ghost_results.pose_landmarks:
+        #     ghost_color = (220, 220, 220)  # Light grey for the ghost
+        #     ghost_landmarks = ghost_results.pose_landmarks.landmark
+        # 
+        #     # Create a transparent overlay for the ghost
+        #     overlay = frame.copy()
+        #     alpha = 0.4 # Transparency factor
+        # 
+        #     for connection in self.mp_pose.POSE_CONNECTIONS:
+        #         start_idx, end_idx = connection
+        #         start = ghost_landmarks[start_idx]
+        #         end = ghost_landmarks[end_idx]
+        # 
+        #         if start.visibility > 0.5 and end.visibility > 0.5:
+        #             start_point = (int(start.x * w), int(start.y * h))
+        #             end_point = (int(end.x * w), int(end.y * h))
+        #             cv2.line(overlay, start_point, end_point, ghost_color, 2)
+        # 
+        #     frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
 
 
         # 2. Draw the user's pose with error highlighting
@@ -202,8 +206,7 @@ class PoseComparison:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         self.output_filename = f"your_pose_{timestamp}.mp4"
         
-        # Define codec and create VideoWriter
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Use XVID for better compatibility
         self.video_writer = cv2.VideoWriter(
             self.output_filename,
             fourcc,
@@ -259,10 +262,11 @@ class PoseComparison:
             
             
             self.video_writer.write(frame_with_score)
-    
+
     def process_video_files(self, user_video_path: str, output_path: str, progress_queue: 'queue.Queue'):
         """
-        Compares a user's video against the reference video and saves a side-by-side comparison video.
+        Compares a user's video against the reference video, saves a side-by-side comparison video,
+        and returns the average similarity score.
         Reports progress via a queue.
         """
         user_cap = cv2.VideoCapture(user_video_path)
@@ -281,44 +285,46 @@ class PoseComparison:
         fps = min(self.ref_fps, user_fps) if self.ref_fps > 0 and user_fps > 0 else 30
 
         # For the output video, we'll use the standard display size from _create_display
-        output_width = 640 * 2  # Side-by-side
+        output_width = 640 * 2
         output_height = 480
 
-        # Create VideoWriter for the output
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        video_writer = cv2.VideoWriter(output_path, fourcc, fps, (output_width, output_height))
+        # Use XVID for intermediate format (more reliable than H264 in OpenCV)
+        temp_filename = f"temp_comparison_{uuid.uuid4()}.avi"
+        temp_path = os.path.join(os.path.dirname(output_path), temp_filename)
 
-        self.ref_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # Rewind reference video
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Use XVID for better compatibility
+        video_writer = cv2.VideoWriter(temp_path, fourcc, fps, (output_width, output_height))
+
+        self.ref_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
 
         progress_queue.put({"type": "progress", "step": "processing_frames", "message": f"Processing {total_frames} frames...", "percentage": 20})
 
+        scores = []
+        frame_count = 0
         try:
             for i in range(total_frames):
-                # Read frames
                 ret_ref, ref_frame = self.ref_cap.read()
                 ret_user, user_frame = user_cap.read()
 
                 if not ret_ref or not ret_user:
                     break
 
-                # Process frames
                 user_keypoints, user_results = self._extract_keypoints(user_frame)
                 ref_keypoints, ref_results = self._extract_keypoints(ref_frame)
 
                 score, wrong_keypoints = self._calculate_score(user_keypoints, ref_keypoints)
+                scores.append(score)
+                frame_count += 1
 
-                # Create the combined display frame
                 display_frame, _ = self._create_display(
                     ref_frame, ref_results,
                     user_frame, user_results, score, wrong_keypoints
                 )
 
-                # Write frame to output video
                 video_writer.write(display_frame)
 
-                # Report detailed progress (every 10 frames for better UX)
                 if i % 10 == 0:
-                    progress_percentage = 20 + int((i / total_frames) * 70)  # 20-90% range for frame processing
+                    progress_percentage = 20 + int((i / total_frames) * 70)
                     progress_message = f"Processed frame {i+1}/{total_frames} ({progress_percentage}%)"
                     progress_queue.put({"type": "progress", "step": "processing_frames", "message": progress_message, "percentage": progress_percentage})
 
@@ -327,17 +333,32 @@ class PoseComparison:
             progress_queue.put({"type": "error", "data": f"ERROR: {str(e)}\n{traceback.format_exc()}"})
 
         finally:
-            # Release all resources
             user_cap.release()
             self.ref_cap.release()
             video_writer.release()
-            progress_queue.put({"type": "progress", "step": "saving_video", "message": "Saving comparison video...", "percentage": 95})
-            progress_queue.put({"type": "progress", "step": "completed", "message": f"✅ Comparison video saved to {output_path}", "percentage": 100})
+
+            # Convert AVI to H264 MP4
+            if os.path.exists(temp_path):
+                progress_queue.put({"type": "progress", "step": "converting", "message": "Converting to H264 format...", "percentage": 95})
+
+                if self._convert_to_h264(temp_path, output_path):
+                    self.logger.info(f"✅ Video saved successfully with H264 encoding: {output_path}")
+                    progress_queue.put({"type": "progress", "step": "completed", "message": f"✅ Comparison video saved to {output_path}", "percentage": 100})
+                else:
+                    self.logger.error(f"❌ Failed to convert video to H264, falling back to renaming AVI.")
+                    # Move temp file to output path if conversion fails
+                    os.rename(temp_path, output_path)
+                    progress_queue.put({"type": "progress", "step": "completed", "message": f"⚠️ Video saved as AVI (H264 conversion failed): {output_path}", "percentage": 100})
+            else:
+                progress_queue.put({"type": "progress", "step": "completed", "message": f"❌ Failed to save video", "percentage": 100})
+
+        return np.mean(scores) if scores else 0.0, scores
 
     def annotate_video(self, raw_user_video_path: str, annotated_output_path: str):
         """
-        Takes a raw user video, compares it against the reference, and creates a new
-        video with the user's skeleton, errors, and a reference 'ghost' drawn on it.
+        Takes a raw user video, compares it against the reference, creates a new
+        video with the user's skeleton, errors, and a reference 'ghost' drawn on it,
+        and returns the average similarity score.
         """
         user_cap = cv2.VideoCapture(raw_user_video_path)
         if not user_cap.isOpened():
@@ -357,11 +378,16 @@ class PoseComparison:
         height = int(user_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
         # Create VideoWriter for the annotated output
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        video_writer = cv2.VideoWriter(annotated_output_path, fourcc, fps, (width, height))
+        # Use XVID for intermediate format, then convert to H264
+        temp_filename = f"temp_annotated_{uuid.uuid4()}.avi"
+        temp_path = os.path.join(os.path.dirname(annotated_output_path), temp_filename)
 
-        self.ref_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # Rewind reference video
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Use XVID for better compatibility
+        video_writer = cv2.VideoWriter(temp_path, fourcc, fps, (width, height))
 
+        self.ref_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
+        scores = []
         try:
             for i in range(total_frames):
                 ret_ref, ref_frame = self.ref_cap.read()
@@ -373,7 +399,8 @@ class PoseComparison:
                 # Perform comparison to get data
                 user_keypoints, user_results = self._extract_keypoints(user_frame)
                 ref_keypoints, ref_results = self._extract_keypoints(ref_frame)
-                _, wrong_keypoints = self._calculate_score(user_keypoints, ref_keypoints)
+                score, wrong_keypoints = self._calculate_score(user_keypoints, ref_keypoints)
+                scores.append(score)
 
                 # --- DEBUGGING ---
                 print(f"Frame {i}: Found {len(wrong_keypoints)} wrong keypoints: {wrong_keypoints}")
@@ -391,9 +418,65 @@ class PoseComparison:
         finally:
             user_cap.release()
             video_writer.release()
-            print(f"✅ Annotation complete. Final video saved to: {annotated_output_path}")
 
-    #
+            # Convert AVI to H264 MP4
+            if os.path.exists(temp_path):
+                self.logger.info(f"🔄 Converting annotated video to H264 format...")
+                if self._convert_to_h264(temp_path, annotated_output_path):
+                    self.logger.info(f"✅ Annotated video saved with H264 encoding: {annotated_output_path}")
+                else:
+                    self.logger.error(f"❌ Failed to convert annotated video to H264, keeping AVI format")
+                    # Move temp file to output path if conversion fails
+                    os.rename(temp_path, annotated_output_path)
+            else:
+                self.logger.error(f"❌ Failed to save annotated video")
+
+        # Calculate average score
+        average_score = np.mean(scores) if scores else 0.0
+        self.logger.info(f"Average similarity score for annotation: {average_score:.2f}")
+
+        return average_score
+
+    def _convert_to_h264(self, input_path: str, output_path: str) -> bool:
+        """
+        Convert video to H264 MP4 format using FFmpeg.
+        Returns True if conversion successful, False otherwise.
+        """
+        ffmpeg_path = shutil.which("ffmpeg")
+        if not ffmpeg_path:
+            self.logger.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            self.logger.error("!!! FFmpeg not found. Cannot convert video to H.264.")
+            self.logger.error("!!! Please install FFmpeg and ensure it is in your system's PATH.")
+            self.logger.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            return False
+        try:
+            cmd = [
+                ffmpeg_path, "-i", input_path,
+                "-c:v", "libx264",  # Use H264 encoder
+                "-preset", "fast",  # Fast encoding preset
+                "-crf", "23",       # Quality (lower = better quality)
+                "-y",               # Overwrite output file
+                output_path
+            ]
+            
+            self.logger.info(f"🔄 Converting {input_path} to H264 format...")
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            
+            if result.returncode == 0:
+                self.logger.info(f"✅ Video conversion successful: {output_path}")
+                # Remove temporary file
+                if os.path.exists(input_path) and input_path != output_path:
+                    os.remove(input_path)
+                return True
+            else:
+                self.logger.error(f"❌ FFmpeg conversion failed: {result.stderr}")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"❌ Error converting video: {str(e)}")
+            return False
+
+    # 
     def run(self, camera_index=0):
         """Run side-by-side comparison"""
         user_cap = cv2.VideoCapture(camera_index)#lấy cam realtime 
@@ -480,7 +563,7 @@ class PoseComparison:
                         self._stop_recording()
                 elif key == ord(' '):
                     paused = not paused
-                    print(f"{'Paused' if paused else 'Resumed'}")
+                    print(f"{ 'Paused' if paused else 'Resumed'}")
         
         except KeyboardInterrupt:
             print("\nStopping...")
@@ -490,7 +573,7 @@ class PoseComparison:
                 self._stop_recording()
             user_cap.release()
             self.ref_cap.release()
-            return self.output_path
+            return self.output_filename
 
 
 class LiveComparisonSession:
@@ -513,7 +596,7 @@ class LiveComparisonSession:
         self.height = 480
         fps = 20 # A reasonable default for webcam streams
 
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Use XVID for better compatibility
         self.video_writer = cv2.VideoWriter(self.output_path, fourcc, fps, (self.width, self.height))
         self.is_recording = True
         print(f"✅ Live session recording started: {self.output_path}")
@@ -530,7 +613,7 @@ class LiveComparisonSession:
         if self.video_writer is not None and (self.height, self.width) != user_frame.shape[:2]:
             self.height, self.width, _ = user_frame.shape
             fps = self.video_writer.get(cv2.CAP_PROP_FPS)
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Use XVID for better compatibility
             self.video_writer.release()
             self.video_writer = cv2.VideoWriter(self.output_path, fourcc, fps, (self.width, self.height))
 
@@ -580,7 +663,7 @@ class LiveCameraSession:
     """
 
     def __init__(self, output_dir, reference_video_path=None):
-        logger.info(f"🎥 Initializing LiveCameraSession - Output dir: {output_dir}")
+        self.logger.info(f"🎥 Initializing LiveCameraSession - Output dir: {output_dir}")
         import uuid
         import time
 
@@ -590,7 +673,7 @@ class LiveCameraSession:
         self.output_path = os.path.join(output_dir, f"camera_session_{self.session_id}.mp4")
 
         # MediaPipe setup
-        logger.debug("🤖 Setting up MediaPipe pose detection...")
+        self.logger.debug("🤖 Setting up MediaPipe pose detection...")
         self.mp_pose = mp.solutions.pose
         self.pose = self.mp_pose.Pose(
             static_image_mode=False,
@@ -598,7 +681,7 @@ class LiveCameraSession:
             min_detection_confidence=0.5,
             min_tracking_confidence=0.5
         )
-        logger.debug("✅ MediaPipe pose detection initialized")
+        self.logger.debug("✅ MediaPipe pose detection initialized")
 
         # Session data
         self.frames = []
@@ -607,14 +690,14 @@ class LiveCameraSession:
         self.is_active = False
         self.start_time = None
 
-        logger.info(f"✅ LiveCameraSession initialized - ID: {self.session_id}")
+        self.logger.info(f"✅ LiveCameraSession initialized - ID: {self.session_id}")
 
     def start_session(self):
         """Start the camera session"""
-        logger.info(f"▶️ Starting camera session - ID: {self.session_id}")
+        self.logger.info(f"▶️ Starting camera session - ID: {self.session_id}")
         self.is_active = True
         self.start_time = time.time()
-        logger.info("✅ Camera session started successfully")
+        self.logger.info("✅ Camera session started successfully")
 
     def process_frame(self, frame_bytes):
         """
@@ -622,25 +705,25 @@ class LiveCameraSession:
         Returns pose analysis results for real-time feedback
         """
         if not self.is_active:
-            logger.warning("⚠️ Attempted to process frame but session is not active")
+            self.logger.warning("⚠️ Attempted to process frame but session is not active")
             return {"error": "Session not active"}
 
         try:
             # Convert bytes to numpy array
-            logger.debug(f"🔄 Converting {len(frame_bytes)} bytes to frame...")
+            self.logger.debug(f"🔄 Converting {len(frame_bytes)} bytes to frame...")
             nparr = np.frombuffer(frame_bytes, np.uint8)
             frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
             if frame is None:
-                logger.error("❌ Failed to decode frame from bytes")
+                self.logger.error("❌ Failed to decode frame from bytes")
                 return {"error": "Invalid frame data"}
 
             # Get current timestamp
             current_time = time.time() - self.start_time
-            logger.debug(f"⏱️ Frame timestamp: {current_time:.2f}s")
+            self.logger.debug(f"⏱️ Frame timestamp: {current_time:.2f}s")
 
             # Process pose detection
-            logger.debug("🤖 Processing pose detection...")
+            self.logger.debug("🤖 Processing pose detection...")
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             results = self.pose.process(frame_rgb)
 
@@ -653,7 +736,7 @@ class LiveCameraSession:
             # Store frame and pose data
             self.frames.append(frame)
             self.timestamps.append(current_time)
-            logger.debug(f"💾 Stored frame - Total frames: {len(self.frames)}")
+            self.logger.debug(f"💾 Stored frame - Total frames: {len(self.frames)}")
 
             if results.pose_landmarks:
                 # Extract keypoints
@@ -666,41 +749,41 @@ class LiveCameraSession:
                     "keypoints": keypoints,
                     "confidence": results.pose_landmarks.landmark[0].visibility if results.pose_landmarks.landmark else 0
                 })
-                logger.debug(f"🎯 Pose detected - Keypoints: {len(keypoints)//3}, Confidence: {results.pose_landmarks.landmark[0].visibility if results.pose_landmarks.landmark else 0:.3f}")
+                self.logger.debug(f"🎯 Pose detected - Keypoints: {len(keypoints)//3}, Confidence: {results.pose_landmarks.landmark[0].visibility if results.pose_landmarks.landmark else 0:.3f}")
 
                 frame_info.update({
                     "keypoints_count": len(keypoints) // 3,
                     "confidence": results.pose_landmarks.landmark[0].visibility if results.pose_landmarks.landmark else 0
                 })
             else:
-                logger.debug("❌ No pose detected in frame")
+                self.logger.debug("❌ No pose detected in frame")
                 frame_info.update({
                     "keypoints_count": 0,
                     "confidence": 0
                 })
 
-            logger.debug(f"✅ Frame processing completed - {frame_info}")
+            self.logger.debug(f"✅ Frame processing completed - {frame_info}")
             return frame_info
 
         except Exception as e:
-            logger.error(f"❌ Error processing frame: {str(e)}")
-            logger.debug(f"📋 Frame processing error traceback: {traceback.format_exc()}")
+            self.logger.error(f"❌ Error processing frame: {str(e)}")
+            self.logger.debug(f"📋 Frame processing error traceback: {traceback.format_exc()}")
             return {"error": str(e)}
 
     def start_session(self):
         """Start the camera session"""
-        logger.info(f"▶️ Starting camera session - ID: {self.session_id}")
+        self.logger.info(f"▶️ Starting camera session - ID: {self.session_id}")
         self.is_active = True
         self.start_time = time.time()
-        logger.info("✅ Camera session started successfully")
+        self.logger.info("✅ Camera session started successfully")
 
     def stop_session(self):
         """Stop the camera session and return recorded data"""
         if not self.is_active:
-            logger.warning("⚠️ Attempted to stop session but session is not active")
+            self.logger.warning("⚠️ Attempted to stop session but session is not active")
             return None
 
-        logger.info(f"⏹️ Stopping camera session - ID: {self.session_id}")
+        self.logger.info(f"⏹️ Stopping camera session - ID: {self.session_id}")
         self.is_active = False
         end_time = time.time()
 
@@ -712,38 +795,38 @@ class LiveCameraSession:
             "avg_fps": len(self.frames) / (end_time - self.start_time) if self.frames else 0
         }
 
-        logger.info(f"✅ Camera session stopped - Duration: {session_info['duration']:.2f}s, Frames: {session_info['total_frames']}, Pose Data: {session_info['total_pose_data']}")
+        self.logger.info(f"✅ Camera session stopped - Duration: {session_info['duration']:.2f}s, Frames: {session_info['total_frames']}, Pose Data: {session_info['total_pose_data']}")
         return session_info
 
     def save_session_video(self):
         """Save the recorded session as a video file"""
         if not self.frames:
-            logger.warning("⚠️ Attempted to save session video but no frames recorded")
+            self.logger.warning("⚠️ Attempted to save session video but no frames recorded")
             return None
 
-        logger.info(f"💾 Saving session video - {len(self.frames)} frames to {self.output_path}")
+        self.logger.info(f"💾 Saving session video - {len(self.frames)} frames to {self.output_path}")
         try:
             # Get frame dimensions
             height, width = self.frames[0].shape[:2]
-            logger.debug(f"📹 Video dimensions: {width}x{height}")
+            self.logger.debug(f"📹 Video dimensions: {width}x{height}")
 
             # Create video writer
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Use XVID for better compatibility
             out = cv2.VideoWriter(self.output_path, fourcc, 20.0, (width, height))
 
             # Write frames
             for i, frame in enumerate(self.frames):
                 out.write(frame)
                 if i % 100 == 0:  # Log progress every 100 frames
-                    logger.debug(f"📹 Written {i}/{len(self.frames)} frames")
+                    self.logger.debug(f"📹 Written {i}/{len(self.frames)} frames")
 
             out.release()
-            logger.info(f"✅ Session video saved successfully: {self.output_path}")
+            self.logger.info(f"✅ Session video saved successfully: {self.output_path}")
             return self.output_path
 
         except Exception as e:
-            logger.error(f"❌ Error saving session video: {str(e)}")
-            logger.debug(f"📋 Video save error traceback: {traceback.format_exc()}")
+            self.logger.error(f"❌ Error saving session video: {str(e)}")
+            self.logger.debug(f"📋 Video save error traceback: {traceback.format_exc()}")
             return None
 
     def analyze_session(self, reference_video_path=None):
@@ -751,31 +834,31 @@ class LiveCameraSession:
         Analyze the recorded session against a reference video
         Returns comparison results
         """
-        logger.info(f"🔍 Starting session analysis - Session ID: {self.session_id}")
+        self.logger.info(f"🔍 Starting session analysis - Session ID: {self.session_id}")
         ref_path = reference_video_path or self.reference_video_path
-        logger.info(f"📹 Reference video for analysis: {ref_path}")
+        self.logger.info(f"📹 Reference video for analysis: {ref_path}")
 
         try:
             if not self.frames:
-                logger.error("❌ No frames recorded in session for analysis")
+                self.logger.error("❌ No frames recorded in session for analysis")
                 return {"error": "No frames recorded in session"}
 
             # Save session video first
-            logger.info("💾 Saving session video before analysis...")
+            self.logger.info("💾 Saving session video before analysis...")
             session_video_path = self.save_session_video()
             if not session_video_path:
-                logger.error("❌ Failed to save session video for analysis")
+                self.logger.error("❌ Failed to save session video for analysis")
                 return {"error": "Failed to save session video"}
 
             # Use existing PoseComparison for analysis
-            logger.info("🤖 Initializing PoseComparison for analysis...")
+            self.logger.info("🤖 Initializing PoseComparison for analysis...")
             comparison = PoseComparison(ref_path)
             annotated_video_path = session_video_path.replace("camera_session_", "analyzed_session_")
-            logger.info(f"🎨 Creating annotated video: {annotated_video_path}")
+            self.logger.info(f"🎨 Creating annotated video: {annotated_video_path}")
 
             # Create annotated video
             comparison.annotate_video(session_video_path, annotated_video_path)
-            logger.info("✅ Session analysis completed successfully")
+            self.logger.info("✅ Session analysis completed successfully")
 
             analysis_result = {
                 "session_id": self.session_id,
@@ -786,10 +869,45 @@ class LiveCameraSession:
                 "pose_detections": len(self.pose_data)
             }
 
-            logger.info(f"📊 Analysis result: {analysis_result}")
+            self.logger.info(f"📊 Analysis result: {analysis_result}")
             return analysis_result
 
         except Exception as e:
-            logger.error(f"❌ Error analyzing session: {str(e)}")
-            logger.debug(f"📋 Analysis error traceback: {traceback.format_exc()}")
+            self.logger.error(f"❌ Error analyzing session: {str(e)}")
+            self.logger.debug(f"📋 Analysis error traceback: {traceback.format_exc()}")
             return {"error": str(e)}
+
+    def _convert_to_h264(self, input_path: str, output_path: str) -> bool:
+        """
+        Convert video to H264 MP4 format using FFmpeg
+        Returns True if conversion successful, False otherwise
+        """
+        try:
+            cmd = [
+                "ffmpeg", "-i", input_path,
+                "-c:v", "libx264",  # Use H264 encoder
+                "-preset", "fast",  # Fast encoding preset
+                "-crf", "23",       # Quality (lower = better quality)
+                "-y",               # Overwrite output file
+                output_path
+            ]
+            
+            self.logger.info(f"🔄 Converting {input_path} to H264 format...")
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            
+            if result.returncode == 0:
+                self.logger.info(f"✅ Video conversion successful: {output_path}")
+                # Remove temporary file
+                if os.path.exists(input_path) and input_path != output_path:
+                    os.remove(input_path)
+                return True
+            else:
+                self.logger.error(f"❌ FFmpeg conversion failed: {result.stderr}")
+                return False
+                
+        except subprocess.TimeoutExpired:
+            self.logger.error("❌ Video conversion timeout")
+            return False
+        except Exception as e:
+            self.logger.error(f"❌ Error converting video: {str(e)}")
+            return False

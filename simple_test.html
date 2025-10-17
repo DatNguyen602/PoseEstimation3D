@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Video API</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .form-group { margin: 20px 0; }
+        input[type="file"] { margin: 10px 0; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px; }
+        video { max-width: 100%; margin: 20px 0; }
+        .loading { color: #007bff; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>🎬 Test Video API</h1>
+
+    <!-- Test đơn giản: Upload 2 video và compare -->
+    <div class="form-group">
+        <h3>Test 1: So sánh 2 video</h3>
+        <input type="file" id="userVideo" accept="video/*">
+        <input type="file" id="referenceVideo" accept="video/*">
+        <button onclick="compareVideos()">Compare Videos</button>
+    </div>
+
+    <!-- Test lấy danh sách video tham khảo -->
+    <div class="form-group">
+        <h3>Test 2: Lấy danh sách video tham khảo</h3>
+        <button onclick="loadReferences()">Load References</button>
+    </div>
+
+    <!-- Hiển thị kết quả -->
+    <div id="result" class="result" style="display: none;"></div>
+
+    <!-- Hiển thị video -->
+    <video id="videoPlayer" controls style="display: none;">
+        Trình duyệt không hỗ trợ video.
+    </video>
+
+    <script>
+        async function compareVideos() {
+            const userFile = document.getElementById('userVideo').files[0];
+            const refFile = document.getElementById('referenceVideo').files[0];
+
+            if (!userFile || !refFile) {
+                alert('Vui lòng chọn cả 2 video!');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('user_video', userFile);
+            formData.append('reference_video', refFile);
+
+            document.getElementById('result').innerHTML = '<div class="loading">Đang xử lý...</div>';
+            document.getElementById('result').style.display = 'block';
+
+            try {
+                const response = await fetch('http://localhost:8000/api/compare_videos/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                document.getElementById('result').innerHTML =
+                    '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+
+                if (result.side_by_side_video_url) {
+                    document.getElementById('videoPlayer').src =
+                        'http://localhost:8000' + result.side_by_side_video_url;
+                    document.getElementById('videoPlayer').style.display = 'block';
+                }
+
+            } catch (error) {
+                document.getElementById('result').innerHTML =
+                    '<div class="error">Lỗi: ' + error.message + '</div>';
+            }
+        }
+
+        async function loadReferences() {
+            try {
+                const response = await fetch('http://localhost:8000/api/reference_videos/');
+                const videos = await response.json();
+
+                document.getElementById('result').innerHTML =
+                    '<pre>Danh sách video tham khảo:\n' + JSON.stringify(videos, null, 2) + '</pre>';
+                document.getElementById('result').style.display = 'block';
+
+            } catch (error) {
+                document.getElementById('result').innerHTML =
+                    '<div class="error">Lỗi: ' + error.message + '</div>';
+                document.getElementById('result').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -5,6 +5,7 @@ from ultralytics import YOLO
 import os
 import time
 from pathlib import Path
+from performance_metrics import metrics_collector
 
 class PoseDetector:
     def __init__(self, model_path='yolo11n-pose.pt'):
@@ -201,6 +202,9 @@ class PoseDetector:
                 frame_idx += 1
                 continue
             
+            # Record start time for this frame
+            frame_start_time = time.time()
+            
             # Detect poses using YOLOv11
             results = self.model(
                 frame, 
@@ -210,6 +214,29 @@ class PoseDetector:
                 max_det=20                        # Max detections
             )
             
+            # --- FILTERING LOGIC: Keep only the largest person if multiple are detected ---
+            if results and len(results) > 0 and results[0].keypoints is not None and len(results[0].keypoints.data) > 1:
+                boxes_tensor = results[0].boxes.data
+                
+                best_person_idx = -1
+                max_area = -1
+                
+                for i in range(len(boxes_tensor)):
+                    box = boxes_tensor[i]
+                    # box format: [x1, y1, x2, y2, conf, class]
+                    x1, y1, x2, y2 = self._extract_value(box[0]), self._extract_value(box[1]), self._extract_value(box[2]), self._extract_value(box[3])
+                    area = (x2 - x1) * (y2 - y1)
+                    
+                    if area > max_area:
+                        max_area = area
+                        best_person_idx = i
+                
+                # Filter the results object to only keep the best person
+                if best_person_idx != -1:
+                    results[0].keypoints.data = results[0].keypoints.data[best_person_idx:best_person_idx+1]
+                    results[0].boxes.data = results[0].boxes.data[best_person_idx:best_person_idx+1]
+            # --- END FILTERING LOGIC ---
+
             # Process detections
             frame_poses = self._process_detections(results, max_people)
             all_poses.append(frame_poses)
@@ -227,6 +254,11 @@ class PoseDetector:
             
             processed_frames += 1
             frame_idx += 1
+
+            # Record frame processing metrics
+            processing_time = time.time() - frame_start_time
+            people_count = len(frame_poses)
+            metrics_collector.record_frame_processing(processed_frames, processing_time, people_count)
             
             # Progress update
             if processed_frames % 50 == 0:

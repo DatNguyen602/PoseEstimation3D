@@ -1,0 +1,44 @@
+{
+  "video_info": {
+    "video_path": "uploads/d3a7186b-f0ab-44e3-a7d1-3e95cfae7ec8.mp4",
+    "video_duration_seconds": 51.5,
+    "video_fps": 30.0,
+    "total_frames": 1545,
+    "processed_frames": 1545,
+    "processing_efficiency": "100.0%"
+  },
+  "processing_times": {
+    "total_processing_time_seconds": 55.406,
+    "pose_detection_time_seconds": 56.696,
+    "pose_3d_estimation_time_seconds": 1.474,
+    "io_operations_time_seconds": 0.0,
+    "estimated_time_for_1min_video": 64.551
+  },
+  "processing_speeds": {
+    "overall_fps": 27.89,
+    "pose_detection_fps": 27.25,
+    "pose_3d_estimation_fps": 3144.52
+  },
+  "detection_statistics": {
+    "frames_with_poses": 1545,
+    "total_people_detected": 3091,
+    "avg_people_per_frame": 2.0,
+    "detection_rate": "100.0%"
+  },
+  "pose_3d_quality": {
+    "valid_3d_poses": 4635,
+    "total_3d_joints": 78795,
+    "avg_3d_confidence": 17.0,
+    "pose_success_rate": "300.0%"
+  },
+  "accuracy_metrics": {
+    "mpjpe_available": false,
+    "mpjpe_value": null,
+    "mpjpe_per_joint": null
+  },
+  "timing_info": {
+    "start_time": "2025-10-17T11:13:10.829208",
+    "end_time": "2025-10-17T11:14:10.028739",
+    "total_duration_seconds": 59.2
+  }
+}

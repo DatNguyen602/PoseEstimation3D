@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Video Debug Page</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; margin-top: 50px; }
+        video { border: 2px solid #ccc; max-width: 90%; }
+        h1 { color: #333; }
+        p { color: #666; }
+    </style>
+</head>
+<body>
+    <h1>Simple Video Playback Test</h1>
+    <p>This page attempts to play the video directly from the server URL.</p>
+    <p>If you can see and play the video below, it confirms the server is working correctly.</p>
+    <video controls autoplay src="http://localhost:8000/res/output/comparison_d1f13310-0257-4f1b-a8fd-c13708e6ad32.mp4" type="video/mp4">
+        Your browser does not support the video tag or the video failed to load.
+    </video>
+    <p>
+        URL Tested: <code>http://localhost:8000/res/output/comparison_d1f13310-0257-4f1b-a8fd-c13708e6ad32.mp4</code>
+    </p>
+</body>
+</html>
