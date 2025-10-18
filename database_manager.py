@@ -76,6 +76,7 @@ class DatabaseManager:
             status ENUM('processing', 'completed', 'failed') DEFAULT 'processing',
             error_message TEXT,
             processing_time_seconds FLOAT DEFAULT 0,
+            type VARCHAR(255),
             INDEX idx_user_id (user_id),
             INDEX idx_process_type (process_type),
             INDEX idx_status (status),
@@ -107,18 +108,48 @@ class DatabaseManager:
         """
         insert_sql = """
         INSERT INTO video3d (
+            created_at, created_by, is_deleted, updated_at, updated_by, version,
             json, result_url, title, video_url, user_id, process_type,
-            status, created_at, updated_at
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            status, error_message, processing_time_seconds, type
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
 
         # Chuẩn bị dữ liệu
-        json_data = json.dumps(data, ensure_ascii=False, default=str)
+        # Special handling for 'process_video_stream' success case as per user request
+        if process_type == 'process_video_stream' and 'error' not in data:
+            json_payload = {'poses_3d': data.get('poses_3d')}
+        else:
+            json_payload = data
+        
+        json_content = json.dumps(json_payload, ensure_ascii=False, default=str)
         result_url = data.get('side_by_side_video_url') or data.get('result_url') or data.get('output_url')
         title = data.get('title') or f"{process_type} - {datetime.now().strftime('%Y%m%d_%H%M%S')}"
         video_url = data.get('video_url') or data.get('input_video_url')
         status = 'completed' if 'error' not in data else 'failed'
         error_message = data.get('error') if 'error' in data else None
+
+        # Normalize process type for enum columns
+        process_type_value = (process_type or 'compare_videos').strip()
+        if process_type_value not in {'compare_videos', 'process_video_stream', 'analyze_performance'}:
+            process_type_value = 'compare_videos'
+
+        if process_type_value == 'process_video_stream':
+            record_type = 'PROCESS_VIDEO_STREAM'
+        else:
+            record_type = 'COMPARE_VIDEO'
+
+        created_by = str(user_id) if user_id is not None else 'system'
+        updated_by = created_by
+        is_deleted = 0
+        version = 1
+
+        # MySQL schema expects integer user_id
+        user_id_value = None
+        if user_id is not None:
+            try:
+                user_id_value = int(user_id)
+            except (TypeError, ValueError):
+                user_id_value = None
 
         # Tính thời gian xử lý nếu có
         processing_time = 0
@@ -136,23 +167,31 @@ class DatabaseManager:
         logger.info(f"   🎬 Video URL: {video_url}")
         logger.info(f"   ✅ Status: {status}")
         logger.info(f"   ⏱️ Processing Time: {processing_time:.3f}s")
-        logger.info(f"   📊 JSON Data Size: {len(json_data)} characters")
+        logger.info(f"   📊 JSON Data Size: {len(json_content)} characters")
 
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 logger.info(f"🔗 Executing INSERT query...")
 
+                current_time = datetime.now(timezone.utc)
                 cursor.execute(insert_sql, (
-                    json_data,
+                    current_time,
+                    created_by,
+                    is_deleted,
+                    current_time,
+                    updated_by,
+                    version,
+                    json_content,
                     result_url,
                     title,
                     video_url,
-                    user_id,
-                    process_type,
+                    user_id_value,
+                    process_type_value,
                     status,
-                    datetime.now(timezone.utc),
-                    datetime.now(timezone.utc)
+                    error_message,
+                    processing_time,
+                    record_type
                 ))
 
                 conn.commit()
@@ -163,14 +202,7 @@ class DatabaseManager:
                 logger.info(f"   📊 Rows affected: {cursor.rowcount}")
 
                 # Lưu thời gian xử lý nếu có
-                if processing_time > 0:
-                    logger.info(f"⏱️ Saving processing time: {processing_time:.3f}s")
-                    self.update_processing_time(record_id, processing_time)
-
-                # Lưu lỗi nếu có
-                if error_message:
-                    logger.warning(f"⚠️ Saving error message: {error_message[:100]}...")
-                    self.update_error_message(record_id, error_message)
+                # Các trường processing_time/error_message đã được lưu trực tiếp trong INSERT
 
                 return record_id
 
@@ -181,6 +213,7 @@ class DatabaseManager:
             logger.error(f"   💡 SQL State: {e.sqlstate}")
             raise e
 
+    def update_processing_time(self, record_id: int, processing_time: float):
         """Cập nhật thời gian xử lý cho bản ghi"""
         try:
             with self.get_connection() as conn:
@@ -234,7 +267,7 @@ class DatabaseManager:
 
         select_sql = f"""
         SELECT id, created_at, created_by, updated_at, json, result_url,
-               title, video_url, user_id, process_type, status, processing_time_seconds
+               title, video_url, user_id, process_type, status, processing_time_seconds, type
         FROM video3d
         WHERE {where_clause}
         ORDER BY created_at DESC
@@ -260,9 +293,9 @@ class DatabaseManager:
                 for row in cursor.fetchall():
                     # Parse JSON data
                     try:
-                        json_data = json.loads(row['json']) if row['json'] else {}
+                        json_content = json.loads(row['json']) if row['json'] else {}
                     except json.JSONDecodeError:
-                        json_data = {}
+                        json_content = {}
                         logger.warning(f"⚠️ Failed to parse JSON data for record {row['id']}")
 
                     result_item = {
@@ -276,7 +309,8 @@ class DatabaseManager:
                         'process_type': row['process_type'],
                         'status': row['status'],
                         'processing_time_seconds': row['processing_time_seconds'],
-                        'data': json_data
+                        'type': row['type'],
+                        'data': json_content
                     }
                     results.append(result_item)
 

@@ -206,7 +206,7 @@ async def process_video_stream(
                             yield {"event": "done", "data": "Processing finished."}
                             break
                         elif message["type"] == "result":
-                            # Process result
+                            # Process and save result
                             final_json_path, generated_files = message["data"]
                             files_to_cleanup.extend(generated_files)
                             
@@ -222,10 +222,38 @@ async def process_video_stream(
                             if title:
                                 result_data['title'] = title
                             
+                            # Save to database
+                            logger.info(f"💾 Bắt đầu lưu kết quả vào database cho user: {user_id}")
+                            record_id = db_manager.save_video_result(
+                                result_data,
+                                'process_video_stream',
+                                user_id
+                            )
+                            
+                            # Add database ID
+                            result_data['database_record_id'] = record_id
+                            logger.info(f"✅ Thành công! Đã lưu vào database với ID: {record_id}")
                             yield {"event": "result", "data": json.dumps(result_data)}
-
+                            
                         elif message["type"] == "error":
-                            logger.error(f"❌ Error processing video for user {user_id} with title {title}: {message['data']}")
+                            # Save error to database
+                            logger.info(f"💾 Bắt đầu lưu lỗi vào database cho user: {user_id}")
+                            error_data = {
+                                'error': message['data'],
+                                'input_video_url': file.filename,
+                                'title': title or 'Video Processing Failed'
+                            }
+                            
+                            if user_id:
+                                error_data['user_id'] = user_id
+                            
+                            logger.info(f"📤 Gửi dữ liệu lỗi đến database manager...")
+                            db_manager.save_video_result(
+                                error_data,
+                                'process_video_stream',
+                                user_id
+                            )
+                            logger.info(f"✅ Thành công! Đã lưu lỗi vào database")
                             yield {"event": "error", "data": message["data"]}
                             break
                     else:
@@ -366,7 +394,17 @@ def run_video_comparison_in_thread(user_video_path, reference_video_path, output
 @app.post("/api/compare_videos/", 
           summary="Compare two uploaded videos (batch processing)",
           tags=["Video Comparison"])
-async def compare_videos(user_video: UploadFile = File(...), reference_video: UploadFile = File(...)):
+async def compare_videos(user_video: UploadFile = File(...), reference_video: UploadFile = File(...), save_to_db: bool = True, user_id: str = Form(None), title: str = Form(None)):
+    """
+    Compare two uploaded videos (batch processing).
+    
+    Args:
+        user_video: The user's video file
+        reference_video: The reference video file
+        save_to_db: Whether to save results to database (default: True)
+        user_id: User ID for database record (optional)
+        title: Title for database record (optional)
+    """
     user_video_path, user_request_id = await save_upload_file(user_video)
     ref_video_path, _ = await save_upload_file(reference_video)
     
@@ -396,9 +434,65 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
                             break
                         elif message["type"] == "result":
                             # Return the final result with video URL
-                            yield {"event": "result", "data": json.dumps(message["data"])}
+                            result_data = message["data"]
+                            
+                            # Save to database if requested
+                            if save_to_db:
+                                try:
+                                    logger.info(f"💾 Bắt đầu lưu kết quả vào database cho user: {user_id}")
+                                    # Add metadata for database
+                                    result_data['input_video_url'] = user_video.filename
+                                    if user_id:
+                                        result_data['user_id'] = user_id
+                                    if title:
+                                        result_data['title'] = title
+                                    
+                                    # Save to database
+                                    logger.info(f"📤 Gửi dữ liệu đến database manager...")
+                                    record_id = db_manager.save_video_result(
+                                        result_data, 
+                                        'compare_videos',
+                                        user_id
+                                    )
+                                    
+                                    # Add database ID to result
+                                    result_data['database_record_id'] = record_id
+                                    logger.info(f"✅ Thành công! Đã lưu vào database với ID: {record_id}")
+                                    
+                                except Exception as db_error:
+                                    logger.error(f"❌ Thất bại khi lưu vào database: {str(db_error)}")
+                                    logger.error(f"🔍 Chi tiết lỗi: {traceback.format_exc()}")
+                                    # Continue processing even if database save fails
+                            
+                            yield {"event": "result", "data": json.dumps(result_data)}
                         elif message["type"] == "error":
-                            yield {"event": "error", "data": message["data"]}
+                            error_data = message["data"]
+                            
+                            # Save error to database if requested
+                            if save_to_db:
+                                try:
+                                    logger.info(f"💾 Bắt đầu lưu lỗi vào database cho user: {user_id}")
+                                    db_error_data = {
+                                        'error': error_data,
+                                        'input_video_url': user_video.filename,
+                                        'title': title or 'Video Comparison Failed',
+                                        'user_id': user_id
+                                    }
+                                    
+                                    logger.info(f"📤 Gửi dữ liệu lỗi đến database manager...")
+                                    db_manager.save_video_result(
+                                        db_error_data,
+                                        'compare_videos',
+                                        user_id
+                                    )
+                                    logger.info(f"✅ Thành công! Đã lưu lỗi vào database")
+                                    
+                                except Exception as db_error:
+                                    logger.error(f"❌ Thất bại khi lưu lỗi vào database: {str(db_error)}")
+                                    logger.error(f"🔍 Chi tiết lỗi: {traceback.format_exc()}")
+                                    # Continue processing even if database save fails
+                            
+                            yield {"event": "error", "data": error_data}
                             break
                         elif message["type"] == "progress":
                             # Send detailed progress updates
@@ -786,7 +880,8 @@ async def process_and_save_compare_videos(
                                 break
                             elif message["type"] == "result":
                                 # Save result to database
-                                result_data = json.loads(message["data"])
+                                logger.info(f"💾 Bắt đầu lưu kết quả vào database cho user: {user_id}")
+                                result_data = message["data"]
                                 
                                 # Add metadata
                                 result_data['input_video_url'] = user_video.filename
@@ -796,6 +891,7 @@ async def process_and_save_compare_videos(
                                     result_data['title'] = title
                                 
                                 # Save to database
+                                logger.info(f"📤 Gửi dữ liệu đến database manager...")
                                 record_id = db_manager.save_video_result(
                                     result_data, 
                                     'compare_videos',
@@ -804,10 +900,12 @@ async def process_and_save_compare_videos(
                                 
                                 # Add database ID to result
                                 result_data['database_record_id'] = record_id
+                                logger.info(f"✅ Thành công! Đã lưu vào database với ID: {record_id}")
                                 yield {"event": "result", "data": json.dumps(result_data)}
                                 
                             elif message["type"] == "error":
                                 # Save error to database
+                                logger.info(f"💾 Bắt đầu lưu lỗi vào database cho user: {user_id}")
                                 error_data = {
                                     'error': message['data'],
                                     'input_video_url': user_video.filename,
@@ -817,11 +915,13 @@ async def process_and_save_compare_videos(
                                 if user_id:
                                     error_data['user_id'] = user_id
                                 
+                                logger.info(f"📤 Gửi dữ liệu lỗi đến database manager...")
                                 db_manager.save_video_result(
                                     error_data,
                                     'compare_videos',
                                     user_id
                                 )
+                                logger.info(f"✅ Thành công! Đã lưu lỗi vào database")
                                 yield {"event": "error", "data": message["data"]}
                                 break
                             elif message["type"] == "progress":
@@ -890,6 +990,7 @@ async def process_and_save_video_stream(
                                     result_data['title'] = title
                                 
                                 # Save to database
+                                logger.info(f"💾 Bắt đầu lưu kết quả vào database cho user: {user_id}")
                                 record_id = db_manager.save_video_result(
                                     result_data,
                                     'process_video_stream',
@@ -898,10 +999,12 @@ async def process_and_save_video_stream(
                                 
                                 # Add database ID
                                 result_data['database_record_id'] = record_id
+                                logger.info(f"✅ Thành công! Đã lưu vào database với ID: {record_id}")
                                 yield {"event": "result", "data": json.dumps(result_data)}
                                 
                             elif message["type"] == "error":
                                 # Save error to database
+                                logger.info(f"💾 Bắt đầu lưu lỗi vào database cho user: {user_id}")
                                 error_data = {
                                     'error': message['data'],
                                     'input_video_url': file.filename,
@@ -911,11 +1014,13 @@ async def process_and_save_video_stream(
                                 if user_id:
                                     error_data['user_id'] = user_id
                                 
+                                logger.info(f"📤 Gửi dữ liệu lỗi đến database manager...")
                                 db_manager.save_video_result(
                                     error_data,
                                     'process_video_stream',
                                     user_id
                                 )
+                                logger.info(f"✅ Thành công! Đã lưu lỗi vào database")
                                 yield {"event": "error", "data": message["data"]}
                                 break
                             else:
