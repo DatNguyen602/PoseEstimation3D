@@ -1,0 +1,28 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environments
+.venv/
+venv/
+
+# Log files
+*.log
+
+# IDE configuration files
+.idea/
+.vscode/
+
+# Output files
+uploads/
+res/output/
+output_h264.mp4
+temp_video.avi
+comparison_*.mp4
+motion_analysis.gif
+
+# Model files
+*.pt
+VideoPose3D/checkpoint/
