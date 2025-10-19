@@ -122,7 +122,7 @@ class DatabaseManager:
             json_payload = data
         
         json_content = json.dumps(json_payload, ensure_ascii=False, default=str)
-        result_url = data.get('side_by_side_video_url') or data.get('result_url') or data.get('output_url')
+        result_url = data.get('cloudinary_video_url') or data.get('side_by_side_video_url') or data.get('result_url') or data.get('output_url')
         title = data.get('title') or f"{process_type} - {datetime.now().strftime('%Y%m%d_%H%M%S')}"
         video_url = data.get('video_url') or data.get('input_video_url')
         status = 'completed' if 'error' not in data else 'failed'

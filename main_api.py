@@ -361,7 +361,8 @@ def run_video_comparison_in_thread(user_video_path, reference_video_path, output
         video_url = f"/res/output/{video_filename}"
 
         result_data = {
-            "side_by_side_video_path": output_path,
+            "cloudinary_video_url": video_url,
+            "result_url": video_url,
             "side_by_side_video_url": video_url,
             "average_similarity_score": average_score,
             "message": "Video comparison completed successfully",
@@ -472,6 +473,10 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
                                         result_data['user_id'] = user_id
                                     if title:
                                         result_data['title'] = title
+                                    
+                                    # Use cloudinary_video_url as result_url for database storage
+                                    if 'cloudinary_video_url' in result_data:
+                                        result_data['result_url'] = result_data['cloudinary_video_url']
                                     
                                     # Save to database
                                     logger.info(f"📤 Gửi dữ liệu đến database manager...")
@@ -916,6 +921,10 @@ async def process_and_save_compare_videos(
                                 if title:
                                     result_data['title'] = title
                                 
+                                # Use cloudinary_video_url as result_url for database storage
+                                if 'cloudinary_video_url' in result_data:
+                                    result_data['result_url'] = result_data['cloudinary_video_url']
+                                
                                 # Save to database
                                 logger.info(f"📤 Gửi dữ liệu đến database manager...")
                                 record_id = db_manager.save_video_result(
@@ -1014,6 +1023,10 @@ async def process_and_save_video_stream(
                                     result_data['user_id'] = user_id
                                 if title:
                                     result_data['title'] = title
+                                
+                                # Use cloudinary_video_url as result_url for database storage
+                                if 'cloudinary_video_url' in result_data:
+                                    result_data['result_url'] = result_data['cloudinary_video_url']
                                 
                                 # Save to database
                                 logger.info(f"💾 Bắt đầu lưu kết quả vào database cho user: {user_id}")
