@@ -19,6 +19,8 @@ from pose_comparison import PoseComparison, LiveComparisonSession, LiveCameraSes
 from database_manager import db_manager
 # Import pipeline runner
 from run_pipeline import run_full_pipeline
+# Import Cloudinary helper
+from cloudinary_helper import upload_comparison_video
 
 # Setup logging
 logging.basicConfig(
@@ -435,6 +437,30 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
                         elif message["type"] == "result":
                             # Return the final result with video URL
                             result_data = message["data"]
+                            
+                            # Upload video to Cloudinary for better streaming performance
+                            cloudinary_upload_result = None
+                            try:
+                                logger.info(f"☁️ Đang upload video lên Cloudinary: {output_path}")
+                                cloudinary_upload_result = upload_comparison_video(output_path, user_request_id)
+                                
+                                if cloudinary_upload_result.get('success'):
+                                    logger.info(f"✅ Video uploaded to Cloudinary successfully: {cloudinary_upload_result['public_id']}")
+                                    # Add Cloudinary URLs to result data
+                                    result_data['cloudinary_video_url'] = cloudinary_upload_result['secure_url']
+                                    result_data['cloudinary_public_id'] = cloudinary_upload_result['public_id']
+                                    # Add adaptive streaming URL if available
+                                    from cloudinary_helper import CloudinaryHelper
+                                    adaptive_url = CloudinaryHelper.get_adaptive_streaming_url(cloudinary_upload_result['public_id'])
+                                    if adaptive_url:
+                                        result_data['cloudinary_streaming_url'] = adaptive_url
+                                        logger.info(f"📺 Adaptive streaming URL: {adaptive_url}")
+                                else:
+                                    logger.error(f"❌ Failed to upload to Cloudinary: {cloudinary_upload_result.get('error')}")
+                                    # Continue with local URL even if Cloudinary upload fails
+                            except Exception as cloudinary_error:
+                                logger.error(f"❌ Cloudinary upload error: {str(cloudinary_error)}")
+                                # Continue with local URL even if Cloudinary upload fails
                             
                             # Save to database if requested
                             if save_to_db:

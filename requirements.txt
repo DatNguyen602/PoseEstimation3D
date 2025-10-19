@@ -6,3 +6,5 @@ requests
 numpy
 opencv-python
 mediapipe
+cloudinary
+python-dotenv
