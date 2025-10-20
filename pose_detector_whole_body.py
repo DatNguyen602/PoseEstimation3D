@@ -41,8 +41,8 @@ class PoseDetectorWithHands:
             self.hands = None
         
         # Confidence thresholds
-        self.person_conf_threshold = 0.2
-        self.keypoint_conf_threshold = 0.15
+        self.person_conf_threshold = 0.45
+        self.keypoint_conf_threshold = 0.3
         self.hand_conf_threshold = 0.5
         
         self.setup_keypoint_structure()

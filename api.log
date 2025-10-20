@@ -4544,3 +4544,583 @@
 2025-10-19 09:58:50,166 - main_api - INFO - 🧹 Starting cleanup for 2 files...
 2025-10-19 09:58:50,167 - main_api - INFO - 🗑️ Deleted: uploads/aa2f2b0d-84d2-4e13-9a46-ce7a1893f43e.mkv
 2025-10-19 09:58:50,169 - main_api - INFO - 🗑️ Deleted: uploads/a1247837-5b05-427a-94e2-cccecb0b2d82.mp4
+2025-10-19 10:29:55,811 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-19 10:29:55,811 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-19 10:29:55,811 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-19 10:29:55,840 - database_manager - INFO - ✅ Database connection successful!
+2025-10-19 10:29:55,962 - database_manager - INFO - ✅ Table 'video3d' is ready!
+2025-10-19 10:29:55,970 - main_api - INFO - ✅ Database initialized successfully!
+2025-10-19 10:30:25,808 - main_api - INFO - 📹 Saved temporary video to: uploads/d3d14938-cace-45b0-b712-058c82b510fe.mkv
+2025-10-19 10:30:25,814 - main_api - INFO - 📹 Saved temporary video to: uploads/c7c3ad39-27ae-4c61-97d5-ad1348e69b3e.mp4
+2025-10-19 10:30:25,815 - main_api - INFO - 🔄 Starting video comparison process...
+2025-10-19 10:30:25,815 - main_api - INFO -    📹 User video: uploads/d3d14938-cace-45b0-b712-058c82b510fe.mkv
+2025-10-19 10:30:25,815 - main_api - INFO -    🎬 Reference video: uploads/c7c3ad39-27ae-4c61-97d5-ad1348e69b3e.mp4
+2025-10-19 10:30:25,815 - main_api - INFO -    💾 Output: res/output/comparison_d3d14938-cace-45b0-b712-058c82b510fe.mp4
+2025-10-19 10:30:25,815 - main_api - INFO - 🤖 Initializing PoseComparison...
+2025-10-19 10:30:25,904 - main_api - INFO - ⚙️ Processing video files and creating side-by-side comparison...
+2025-10-19 10:30:37,065 - pose_comparison - INFO - 🔄 Converting res/output/temp_comparison_75d4a533-6585-4200-9d2b-5a5aaa772b71.avi to H264 format...
+2025-10-19 10:30:37,799 - pose_comparison - INFO - ✅ Video conversion successful: res/output/comparison_d3d14938-cace-45b0-b712-058c82b510fe.mp4
+2025-10-19 10:30:37,800 - pose_comparison - INFO - ✅ Video saved successfully with H264 encoding: res/output/comparison_d3d14938-cace-45b0-b712-058c82b510fe.mp4
+2025-10-19 10:30:37,800 - main_api - INFO - ✅ Video comparison completed successfully!
+2025-10-19 10:30:37,800 - main_api - INFO -    📊 Side-by-side video saved to: res/output/comparison_d3d14938-cace-45b0-b712-058c82b510fe.mp4
+2025-10-19 10:30:37,800 - main_api - INFO -    💯 Average similarity score: 0.59%
+2025-10-19 10:30:37,800 - main_api - INFO - 🎯 === DANCE SCORING PERFORMANCE METRICS ===
+2025-10-19 10:30:37,801 - main_api - INFO - 🔄 Calculating baseline score (reference vs itself)...
+2025-10-19 10:30:37,801 - dance_scoring - INFO - 🔄 Bắt đầu tính baseline score cho: uploads/c7c3ad39-27ae-4c61-97d5-ad1348e69b3e.mp4
+2025-10-19 10:30:41,105 - main_api - INFO - 📊 BASELINE SCORE: 98.18%
+2025-10-19 10:30:41,105 - main_api - INFO -    ⏱️ Processing time: 3.303s
+2025-10-19 10:30:41,105 - main_api - INFO -    🎬 Frames processed: 100
+2025-10-19 10:30:41,105 - main_api - INFO - 🔄 Calculating algorithm sensitivity score...
+2025-10-19 10:30:41,105 - dance_scoring - INFO - 🔄 Bắt đầu tính sensitivity score
+2025-10-19 10:30:44,543 - main_api - INFO - 🎯 ALGORITHM SENSITIVITY: 98.18%
+2025-10-19 10:30:44,543 - main_api - INFO -    ⏱️ Processing time: 3.437s
+2025-10-19 10:30:44,543 - main_api - INFO -    🎬 Frames processed: 100
+2025-10-19 10:30:44,543 - main_api - INFO - ⚠️ WARNING: Algorithm may be too lenient (high sensitivity score)
+2025-10-19 10:30:44,543 - main_api - INFO - 🎉 === DANCE SCORING METRICS COMPLETED ===
+2025-10-19 10:30:44,543 - main_api - INFO - 🏁 Video comparison thread finished
+2025-10-19 10:30:44,554 - main_api - INFO - ☁️ Đang upload video lên Cloudinary: res/output/comparison_d3d14938-cace-45b0-b712-058c82b510fe.mp4
+2025-10-19 10:30:44,554 - cloudinary_helper - INFO - 📤 Uploading video to Cloudinary: res/output/comparison_d3d14938-cace-45b0-b712-058c82b510fe.mp4
+2025-10-19 10:30:48,148 - cloudinary_helper - INFO - ✅ Video uploaded successfully: comparison_videos/comparison_video_d3d14938-cace-45b0-b712-058c82b510fe
+2025-10-19 10:30:48,148 - main_api - INFO - ✅ Video uploaded to Cloudinary successfully: comparison_videos/comparison_video_d3d14938-cace-45b0-b712-058c82b510fe
+2025-10-19 10:30:48,149 - main_api - INFO - 📺 Adaptive streaming URL: http://res.cloudinary.com/dgbotyfd4/video/upload/sp_auto/v1/comparison_videos/comparison_video_d3d14938-cace-45b0-b712-058c82b510fe.m3u8
+2025-10-19 10:30:48,149 - main_api - INFO - 💾 Bắt đầu lưu kết quả vào database cho user: 1
+2025-10-19 10:30:48,149 - main_api - INFO - 📤 Gửi dữ liệu đến database manager...
+2025-10-19 10:30:48,149 - database_manager - INFO - 💾 Preparing to save video result to database...
+2025-10-19 10:30:48,149 - database_manager - INFO -    📋 Process Type: compare_videos
+2025-10-19 10:30:48,149 - database_manager - INFO -    👤 User ID: 1
+2025-10-19 10:30:48,149 - database_manager - INFO -    📝 Title: tesst
+2025-10-19 10:30:48,149 - database_manager - INFO -    🎬 Video URL: 2025-10-15 16-16-51.mkv
+2025-10-19 10:30:48,149 - database_manager - INFO -    ✅ Status: completed
+2025-10-19 10:30:48,149 - database_manager - INFO -    ⏱️ Processing Time: 6.740s
+2025-10-19 10:30:48,149 - database_manager - INFO -    📊 JSON Data Size: 1150 characters
+2025-10-19 10:30:48,233 - database_manager - INFO - 🔗 Executing INSERT query...
+2025-10-19 10:30:48,269 - database_manager - INFO - ✅ SUCCESS: Video result saved to database!
+2025-10-19 10:30:48,270 - database_manager - INFO -    🆔 Record ID: 51
+2025-10-19 10:30:48,270 - database_manager - INFO -    📊 Rows affected: 1
+2025-10-19 10:30:48,274 - main_api - INFO - ✅ Thành công! Đã lưu vào database với ID: 51
+2025-10-19 10:30:48,275 - main_api - INFO - 🧹 Starting cleanup for 2 files...
+2025-10-19 10:30:48,276 - main_api - INFO - 🗑️ Deleted: uploads/d3d14938-cace-45b0-b712-058c82b510fe.mkv
+2025-10-19 10:30:48,281 - main_api - INFO - 🗑️ Deleted: uploads/c7c3ad39-27ae-4c61-97d5-ad1348e69b3e.mp4
+2025-10-19 10:44:54,903 - main_api - INFO - 📹 Saved temporary video to: uploads/60a087e7-90aa-48f4-b12a-48a02bbf2675.mp4
+2025-10-19 10:44:54,962 - performance_metrics - INFO - 🚀 Started processing video: 60a087e7-90aa-48f4-b12a-48a02bbf2675.mp4
+2025-10-19 10:44:54,962 - performance_metrics - INFO - 📊 Video info: 10.13s, 30.00 FPS, 304 frames
+2025-10-19 10:45:00,008 - performance_metrics - INFO - ⏱️ pose_detection completed in 5.020s
+2025-10-19 10:45:00,199 - performance_metrics - INFO - ⏱️ pose_3d_estimation completed in 0.060s
+2025-10-19 10:45:00,201 - performance_metrics - INFO - ✅ Processing completed in 5.239s
+2025-10-19 10:45:00,201 - performance_metrics - INFO - 🚀 Overall FPS: 63.68
+2025-10-19 10:45:00,201 - performance_metrics - INFO - 📈 Detection rate: 304/304 frames (100.0%)
+2025-10-19 10:45:00,201 - performance_metrics - INFO - 👥 Average people per frame: 1.00
+2025-10-19 10:45:00,201 - performance_metrics - INFO - 💾 Performance metrics saved to: res/output/60a087e7-90aa-48f4-b12a-48a02bbf2675_performance_metrics.json
+2025-10-19 10:45:00,286 - main_api - INFO - 💾 Bắt đầu lưu kết quả vào database cho user: 2
+2025-10-19 10:45:00,304 - database_manager - INFO - 💾 Preparing to save video result to database...
+2025-10-19 10:45:00,304 - database_manager - INFO -    📋 Process Type: process_video_stream
+2025-10-19 10:45:00,304 - database_manager - INFO -    👤 User ID: 2
+2025-10-19 10:45:00,304 - database_manager - INFO -    📝 Title: User8gmail
+2025-10-19 10:45:00,304 - database_manager - INFO -    🎬 Video URL: videomau.mp4
+2025-10-19 10:45:00,304 - database_manager - INFO -    ✅ Status: completed
+2025-10-19 10:45:00,304 - database_manager - INFO -    ⏱️ Processing Time: 0.000s
+2025-10-19 10:45:00,304 - database_manager - INFO -    📊 JSON Data Size: 342748 characters
+2025-10-19 10:45:00,417 - database_manager - INFO - 🔗 Executing INSERT query...
+2025-10-19 10:45:00,544 - database_manager - INFO - ✅ SUCCESS: Video result saved to database!
+2025-10-19 10:45:00,544 - database_manager - INFO -    🆔 Record ID: 52
+2025-10-19 10:45:00,544 - database_manager - INFO -    📊 Rows affected: 1
+2025-10-19 10:45:00,554 - main_api - INFO - ✅ Thành công! Đã lưu vào database với ID: 52
+2025-10-19 10:45:00,564 - main_api - INFO - 🧹 Starting cleanup for 5 files...
+2025-10-19 10:45:00,564 - main_api - INFO - 🗑️ Deleted: uploads/60a087e7-90aa-48f4-b12a-48a02bbf2675.mp4
+2025-10-19 10:45:00,564 - main_api - INFO - 🗑️ Deleted: res/output/60a087e7-90aa-48f4-b12a-48a02bbf2675_3d_poses.json
+2025-10-19 10:45:00,564 - main_api - INFO - 🗑️ Deleted: res/output/60a087e7-90aa-48f4-b12a-48a02bbf2675_3d_poses.npy
+2025-10-19 10:45:00,566 - main_api - INFO - 🗑️ Deleted: res/output/60a087e7-90aa-48f4-b12a-48a02bbf2675_2d_poses.mp4
+2025-10-19 10:45:00,566 - main_api - INFO - 🗑️ Deleted: res/output/60a087e7-90aa-48f4-b12a-48a02bbf2675_performance_metrics.json
+2025-10-19 10:48:49,065 - main_api - INFO - 📹 Saved temporary video to: uploads/8d696f97-be35-4b2f-82a9-ee3bcc8a2c53.mp4
+2025-10-19 10:48:49,102 - performance_metrics - INFO - 🚀 Started processing video: 8d696f97-be35-4b2f-82a9-ee3bcc8a2c53.mp4
+2025-10-19 10:48:49,103 - performance_metrics - INFO - 📊 Video info: 12.27s, 30.00 FPS, 368 frames
+2025-10-19 10:48:53,883 - performance_metrics - INFO - ⏱️ pose_detection completed in 4.756s
+2025-10-19 10:48:54,049 - performance_metrics - INFO - ⏱️ pose_3d_estimation completed in 0.046s
+2025-10-19 10:48:54,051 - performance_metrics - INFO - ✅ Processing completed in 4.949s
+2025-10-19 10:48:54,051 - performance_metrics - INFO - 🚀 Overall FPS: 39.40
+2025-10-19 10:48:54,051 - performance_metrics - INFO - 📈 Detection rate: 368/368 frames (100.0%)
+2025-10-19 10:48:54,051 - performance_metrics - INFO - 👥 Average people per frame: 1.00
+2025-10-19 10:48:54,051 - performance_metrics - INFO - 💾 Performance metrics saved to: res/output/8d696f97-be35-4b2f-82a9-ee3bcc8a2c53_performance_metrics.json
+2025-10-19 10:48:54,086 - main_api - INFO - 💾 Bắt đầu lưu kết quả vào database cho user: 2
+2025-10-19 10:48:54,092 - database_manager - INFO - 💾 Preparing to save video result to database...
+2025-10-19 10:48:54,092 - database_manager - INFO -    📋 Process Type: process_video_stream
+2025-10-19 10:48:54,092 - database_manager - INFO -    👤 User ID: 2
+2025-10-19 10:48:54,092 - database_manager - INFO -    📝 Title: User8gmail
+2025-10-19 10:48:54,092 - database_manager - INFO -    🎬 Video URL: test.mp4
+2025-10-19 10:48:54,092 - database_manager - INFO -    ✅ Status: completed
+2025-10-19 10:48:54,092 - database_manager - INFO -    ⏱️ Processing Time: 0.000s
+2025-10-19 10:48:54,093 - database_manager - INFO -    📊 JSON Data Size: 420154 characters
+2025-10-19 10:48:54,205 - database_manager - INFO - 🔗 Executing INSERT query...
+2025-10-19 10:48:54,314 - database_manager - INFO - ✅ SUCCESS: Video result saved to database!
+2025-10-19 10:48:54,314 - database_manager - INFO -    🆔 Record ID: 53
+2025-10-19 10:48:54,314 - database_manager - INFO -    📊 Rows affected: 1
+2025-10-19 10:48:54,322 - main_api - INFO - ✅ Thành công! Đã lưu vào database với ID: 53
+2025-10-19 10:48:54,332 - main_api - INFO - 🧹 Starting cleanup for 5 files...
+2025-10-19 10:48:54,333 - main_api - INFO - 🗑️ Deleted: uploads/8d696f97-be35-4b2f-82a9-ee3bcc8a2c53.mp4
+2025-10-19 10:48:54,333 - main_api - INFO - 🗑️ Deleted: res/output/8d696f97-be35-4b2f-82a9-ee3bcc8a2c53_3d_poses.json
+2025-10-19 10:48:54,333 - main_api - INFO - 🗑️ Deleted: res/output/8d696f97-be35-4b2f-82a9-ee3bcc8a2c53_3d_poses.npy
+2025-10-19 10:48:54,335 - main_api - INFO - 🗑️ Deleted: res/output/8d696f97-be35-4b2f-82a9-ee3bcc8a2c53_2d_poses.mp4
+2025-10-19 10:48:54,335 - main_api - INFO - 🗑️ Deleted: res/output/8d696f97-be35-4b2f-82a9-ee3bcc8a2c53_performance_metrics.json
+2025-10-19 10:56:34,737 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-19 10:56:34,738 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-19 10:56:34,738 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-19 10:56:34,782 - database_manager - INFO - ✅ Database connection successful!
+2025-10-19 10:56:34,915 - database_manager - INFO - ✅ Table 'video3d' is ready!
+2025-10-19 10:56:34,921 - main_api - INFO - ✅ Database initialized successfully!
+2025-10-19 11:03:44,282 - main_api - INFO - 📹 Saved temporary video to: uploads/f08430d2-c9ba-4418-8b9c-737fc20b565d.mp4
+2025-10-19 11:03:44,389 - performance_metrics - INFO - 🚀 Started processing video: f08430d2-c9ba-4418-8b9c-737fc20b565d.mp4
+2025-10-19 11:03:44,390 - performance_metrics - INFO - 📊 Video info: 10.67s, 30.00 FPS, 320 frames
+2025-10-19 11:03:50,625 - performance_metrics - INFO - ⏱️ pose_detection completed in 6.209s
+2025-10-19 11:03:50,886 - performance_metrics - INFO - ⏱️ pose_3d_estimation completed in 0.139s
+2025-10-19 11:03:50,892 - performance_metrics - INFO - ✅ Processing completed in 6.502s
+2025-10-19 11:03:50,892 - performance_metrics - INFO - 🚀 Overall FPS: 53.97
+2025-10-19 11:03:50,892 - performance_metrics - INFO - 📈 Detection rate: 317/317 frames (100.0%)
+2025-10-19 11:03:50,892 - performance_metrics - INFO - 👥 Average people per frame: 3.00
+2025-10-19 11:03:50,892 - performance_metrics - INFO - 💾 Performance metrics saved to: res/output/f08430d2-c9ba-4418-8b9c-737fc20b565d_performance_metrics.json
+2025-10-19 11:03:50,934 - main_api - INFO - 💾 Bắt đầu lưu kết quả vào database cho user: 2
+2025-10-19 11:03:50,958 - database_manager - INFO - 💾 Preparing to save video result to database...
+2025-10-19 11:03:50,958 - database_manager - INFO -    📋 Process Type: process_video_stream
+2025-10-19 11:03:50,958 - database_manager - INFO -    👤 User ID: 2
+2025-10-19 11:03:50,958 - database_manager - INFO -    📝 Title: User8gmail
+2025-10-19 11:03:50,958 - database_manager - INFO -    🎬 Video URL: #shorts#TRỐNG CHÀO MỪNG ĐẠI BIỂU MỘT NGƯỜI - Thiết bị Đoàn Đội trường học-Liên Đội Trưởng Official (1).mp4
+2025-10-19 11:03:50,958 - database_manager - INFO -    ✅ Status: completed
+2025-10-19 11:03:50,958 - database_manager - INFO -    ⏱️ Processing Time: 0.000s
+2025-10-19 11:03:50,958 - database_manager - INFO -    📊 JSON Data Size: 1436160 characters
+2025-10-19 11:03:51,091 - database_manager - INFO - 🔗 Executing INSERT query...
+2025-10-19 11:03:51,315 - database_manager - INFO - ✅ SUCCESS: Video result saved to database!
+2025-10-19 11:03:51,316 - database_manager - INFO -    🆔 Record ID: 54
+2025-10-19 11:03:51,316 - database_manager - INFO -    📊 Rows affected: 1
+2025-10-19 11:03:51,322 - main_api - INFO - ✅ Thành công! Đã lưu vào database với ID: 54
+2025-10-19 11:03:51,384 - main_api - INFO - 🧹 Starting cleanup for 5 files...
+2025-10-19 11:03:51,385 - main_api - INFO - 🗑️ Deleted: uploads/f08430d2-c9ba-4418-8b9c-737fc20b565d.mp4
+2025-10-19 11:03:51,385 - main_api - INFO - 🗑️ Deleted: res/output/f08430d2-c9ba-4418-8b9c-737fc20b565d_3d_poses.json
+2025-10-19 11:03:51,385 - main_api - INFO - 🗑️ Deleted: res/output/f08430d2-c9ba-4418-8b9c-737fc20b565d_3d_poses.npy
+2025-10-19 11:03:51,387 - main_api - INFO - 🗑️ Deleted: res/output/f08430d2-c9ba-4418-8b9c-737fc20b565d_2d_poses.mp4
+2025-10-19 11:03:51,387 - main_api - INFO - 🗑️ Deleted: res/output/f08430d2-c9ba-4418-8b9c-737fc20b565d_performance_metrics.json
+2025-10-19 11:09:30,480 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-19 11:09:30,480 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-19 11:09:30,480 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-19 11:09:30,525 - database_manager - INFO - ✅ Database connection successful!
+2025-10-19 11:09:30,668 - database_manager - INFO - ✅ Table 'video3d' is ready!
+2025-10-19 11:09:30,675 - main_api - INFO - ✅ Database initialized successfully!
+2025-10-19 11:09:32,311 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-19 11:09:32,312 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-19 11:09:32,312 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-19 11:09:32,353 - database_manager - INFO - ✅ Database connection successful!
+2025-10-19 11:09:32,495 - database_manager - INFO - ✅ Table 'video3d' is ready!
+2025-10-19 11:09:32,502 - main_api - INFO - ✅ Database initialized successfully!
+2025-10-19 11:12:32,471 - main_api - INFO - 📹 Saved temporary video to: uploads/aacd8b24-9a86-4ec2-8008-7ebea7c6f727.mp4
+2025-10-19 11:12:32,588 - performance_metrics - INFO - 🚀 Started processing video: aacd8b24-9a86-4ec2-8008-7ebea7c6f727.mp4
+2025-10-19 11:12:32,588 - performance_metrics - INFO - 📊 Video info: 48.07s, 30.00 FPS, 1442 frames
+2025-10-19 11:13:08,056 - performance_metrics - INFO - ⏱️ pose_detection completed in 35.443s
+2025-10-19 11:13:09,017 - performance_metrics - INFO - ⏱️ pose_3d_estimation completed in 0.834s
+2025-10-19 11:13:09,058 - performance_metrics - INFO - ✅ Processing completed in 36.470s
+2025-10-19 11:13:09,058 - performance_metrics - INFO - 🚀 Overall FPS: 42.63
+2025-10-19 11:13:09,058 - performance_metrics - INFO - 📈 Detection rate: 1442/1442 frames (100.0%)
+2025-10-19 11:13:09,058 - performance_metrics - INFO - 👥 Average people per frame: 5.32
+2025-10-19 11:13:09,058 - performance_metrics - INFO - 💾 Performance metrics saved to: res/output/aacd8b24-9a86-4ec2-8008-7ebea7c6f727_performance_metrics.json
+2025-10-19 11:13:09,234 - main_api - INFO - 💾 Bắt đầu lưu kết quả vào database cho user: 2
+2025-10-19 11:13:09,396 - database_manager - INFO - 💾 Preparing to save video result to database...
+2025-10-19 11:13:09,396 - database_manager - INFO -    📋 Process Type: process_video_stream
+2025-10-19 11:13:09,396 - database_manager - INFO -    👤 User ID: 2
+2025-10-19 11:13:09,396 - database_manager - INFO -    📝 Title: User8gmail
+2025-10-19 11:13:09,396 - database_manager - INFO -    🎬 Video URL: 1019.mp4
+2025-10-19 11:13:09,396 - database_manager - INFO -    ✅ Status: completed
+2025-10-19 11:13:09,396 - database_manager - INFO -    ⏱️ Processing Time: 0.000s
+2025-10-19 11:13:09,396 - database_manager - INFO -    📊 JSON Data Size: 9860141 characters
+2025-10-19 11:13:09,509 - database_manager - INFO - 🔗 Executing INSERT query...
+2025-10-19 11:13:10,368 - database_manager - ERROR - ❌ Database connection error: 2013: Lost connection to MySQL server during query
+2025-10-19 11:13:10,368 - database_manager - ERROR - ❌ DATABASE ERROR: Failed to save video result!
+2025-10-19 11:13:10,368 - database_manager - ERROR -    🔍 MySQL Error Code: 2055
+2025-10-19 11:13:10,368 - database_manager - ERROR -    📄 Error Message: Lost connection to MySQL server at '103.75.187.176:3308', system error: Errno 8: EOF occurred in violation of protocol (_ssl.c:2406)
+2025-10-19 11:13:10,368 - database_manager - ERROR -    💡 SQL State: None
+2025-10-19 11:13:10,368 - main_api - INFO - 🧹 Starting cleanup for 5 files...
+2025-10-19 11:13:10,375 - main_api - INFO - 🗑️ Deleted: uploads/aacd8b24-9a86-4ec2-8008-7ebea7c6f727.mp4
+2025-10-19 11:13:10,376 - main_api - INFO - 🗑️ Deleted: res/output/aacd8b24-9a86-4ec2-8008-7ebea7c6f727_3d_poses.json
+2025-10-19 11:13:10,377 - main_api - INFO - 🗑️ Deleted: res/output/aacd8b24-9a86-4ec2-8008-7ebea7c6f727_3d_poses.npy
+2025-10-19 11:13:10,393 - main_api - INFO - 🗑️ Deleted: res/output/aacd8b24-9a86-4ec2-8008-7ebea7c6f727_2d_poses.mp4
+2025-10-19 11:13:10,393 - main_api - INFO - 🗑️ Deleted: res/output/aacd8b24-9a86-4ec2-8008-7ebea7c6f727_performance_metrics.json
+2025-10-19 11:13:12,151 - database_manager - ERROR - ❌ Database connection error: 2003: Can't connect to MySQL server on '103.75.187.176:3308' (Errno 111: Connection refused)
+2025-10-19 11:13:12,151 - database_manager - ERROR - ❌ Database connection failed: 2003: Can't connect to MySQL server on '103.75.187.176:3308' (Errno 111: Connection refused)
+2025-10-19 11:13:12,151 - main_api - ERROR - ❌ Failed to connect to database
+2025-10-19 11:14:50,769 - main_api - INFO - 📹 Saved temporary video to: uploads/01ba42e0-5b04-439f-bd78-b551821c6b28.mp4
+2025-10-19 11:14:50,885 - performance_metrics - INFO - 🚀 Started processing video: 01ba42e0-5b04-439f-bd78-b551821c6b28.mp4
+2025-10-19 11:14:50,885 - performance_metrics - INFO - 📊 Video info: 14.43s, 30.00 FPS, 433 frames
+2025-10-19 11:15:01,738 - performance_metrics - INFO - ⏱️ pose_detection completed in 10.828s
+2025-10-19 11:15:02,095 - performance_metrics - INFO - ⏱️ pose_3d_estimation completed in 0.229s
+2025-10-19 11:15:02,106 - performance_metrics - INFO - ✅ Processing completed in 11.221s
+2025-10-19 11:15:02,106 - performance_metrics - INFO - 🚀 Overall FPS: 42.10
+2025-10-19 11:15:02,106 - performance_metrics - INFO - 📈 Detection rate: 433/433 frames (100.0%)
+2025-10-19 11:15:02,106 - performance_metrics - INFO - 👥 Average people per frame: 5.00
+2025-10-19 11:15:02,106 - performance_metrics - INFO - 💾 Performance metrics saved to: res/output/01ba42e0-5b04-439f-bd78-b551821c6b28_performance_metrics.json
+2025-10-19 11:15:02,181 - main_api - INFO - 💾 Bắt đầu lưu kết quả vào database cho user: 2
+2025-10-19 11:15:02,226 - database_manager - INFO - 💾 Preparing to save video result to database...
+2025-10-19 11:15:02,226 - database_manager - INFO -    📋 Process Type: process_video_stream
+2025-10-19 11:15:02,226 - database_manager - INFO -    👤 User ID: 2
+2025-10-19 11:15:02,226 - database_manager - INFO -    📝 Title: User8gmail
+2025-10-19 11:15:02,226 - database_manager - INFO -    🎬 Video URL: 1019(1).mp4
+2025-10-19 11:15:02,226 - database_manager - INFO -    ✅ Status: completed
+2025-10-19 11:15:02,226 - database_manager - INFO -    ⏱️ Processing Time: 0.000s
+2025-10-19 11:15:02,226 - database_manager - INFO -    📊 JSON Data Size: 2464805 characters
+2025-10-19 11:15:02,287 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-19 11:15:02,287 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-19 11:15:02,287 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-19 11:15:02,313 - database_manager - INFO - 🔗 Executing INSERT query...
+2025-10-19 11:15:02,642 - database_manager - INFO - ✅ SUCCESS: Video result saved to database!
+2025-10-19 11:15:02,642 - database_manager - INFO -    🆔 Record ID: 55
+2025-10-19 11:15:02,643 - database_manager - INFO -    📊 Rows affected: 1
+2025-10-19 11:15:02,656 - main_api - INFO - ✅ Thành công! Đã lưu vào database với ID: 55
+2025-10-19 11:15:02,711 - main_api - INFO - 🧹 Starting cleanup for 5 files...
+2025-10-19 11:15:02,713 - main_api - INFO - 🗑️ Deleted: uploads/01ba42e0-5b04-439f-bd78-b551821c6b28.mp4
+2025-10-19 11:15:02,713 - main_api - INFO - 🗑️ Deleted: res/output/01ba42e0-5b04-439f-bd78-b551821c6b28_3d_poses.json
+2025-10-19 11:15:02,713 - main_api - INFO - 🗑️ Deleted: res/output/01ba42e0-5b04-439f-bd78-b551821c6b28_3d_poses.npy
+2025-10-19 11:15:02,716 - main_api - INFO - 🗑️ Deleted: res/output/01ba42e0-5b04-439f-bd78-b551821c6b28_2d_poses.mp4
+2025-10-19 11:15:02,716 - main_api - INFO - 🗑️ Deleted: res/output/01ba42e0-5b04-439f-bd78-b551821c6b28_performance_metrics.json
+2025-10-19 11:35:53,754 - main_api - INFO - 📹 Saved temporary video to: uploads/fe633163-7929-4adf-af84-16f09e3ef43c.mp4
+2025-10-19 11:35:53,766 - main_api - INFO - 📹 Saved temporary video to: uploads/a2700964-ba62-4a80-96f6-2a369d90dad0.mp4
+2025-10-19 11:35:53,766 - main_api - INFO - 🔄 Starting video comparison process...
+2025-10-19 11:35:53,766 - main_api - INFO -    📹 User video: uploads/fe633163-7929-4adf-af84-16f09e3ef43c.mp4
+2025-10-19 11:35:53,766 - main_api - INFO -    🎬 Reference video: uploads/a2700964-ba62-4a80-96f6-2a369d90dad0.mp4
+2025-10-19 11:35:53,766 - main_api - INFO -    💾 Output: res/output/comparison_fe633163-7929-4adf-af84-16f09e3ef43c.mp4
+2025-10-19 11:35:53,767 - main_api - INFO - 🤖 Initializing PoseComparison...
+2025-10-19 11:35:54,059 - main_api - INFO - ⚙️ Processing video files and creating side-by-side comparison...
+2025-10-19 11:36:10,688 - pose_comparison - INFO - 🔄 Converting res/output/temp_comparison_e8f790a7-5f78-451d-9d1a-14d481488ffe.avi to H264 format...
+2025-10-19 11:36:11,769 - pose_comparison - INFO - ✅ Video conversion successful: res/output/comparison_fe633163-7929-4adf-af84-16f09e3ef43c.mp4
+2025-10-19 11:36:11,771 - pose_comparison - INFO - ✅ Video saved successfully with H264 encoding: res/output/comparison_fe633163-7929-4adf-af84-16f09e3ef43c.mp4
+2025-10-19 11:36:11,771 - main_api - INFO - ✅ Video comparison completed successfully!
+2025-10-19 11:36:11,771 - main_api - INFO -    📊 Side-by-side video saved to: res/output/comparison_fe633163-7929-4adf-af84-16f09e3ef43c.mp4
+2025-10-19 11:36:11,772 - main_api - INFO -    💯 Average similarity score: 0.03%
+2025-10-19 11:36:11,772 - main_api - INFO - 🎯 === DANCE SCORING PERFORMANCE METRICS ===
+2025-10-19 11:36:11,772 - main_api - INFO - 🔄 Calculating baseline score (reference vs itself)...
+2025-10-19 11:36:11,772 - dance_scoring - INFO - 🔄 Bắt đầu tính baseline score cho: uploads/a2700964-ba62-4a80-96f6-2a369d90dad0.mp4
+2025-10-19 11:36:15,605 - main_api - INFO - 📊 BASELINE SCORE: 99.7%
+2025-10-19 11:36:15,605 - main_api - INFO -    ⏱️ Processing time: 3.832s
+2025-10-19 11:36:15,605 - main_api - INFO -    🎬 Frames processed: 82
+2025-10-19 11:36:15,605 - main_api - INFO - 🔄 Calculating algorithm sensitivity score...
+2025-10-19 11:36:15,605 - dance_scoring - INFO - 🔄 Bắt đầu tính sensitivity score
+2025-10-19 11:36:16,618 - main_api - INFO - 📹 Saved temporary video to: uploads/098d4f4c-740e-4344-8fcc-7cedac331c16.mp4
+2025-10-19 11:36:16,630 - main_api - INFO - 📹 Saved temporary video to: uploads/28f83ebe-e77f-42d4-b3ad-6b8e00dadadb.mp4
+2025-10-19 11:36:16,631 - main_api - INFO - 🔄 Starting video comparison process...
+2025-10-19 11:36:16,631 - main_api - INFO -    📹 User video: uploads/098d4f4c-740e-4344-8fcc-7cedac331c16.mp4
+2025-10-19 11:36:16,631 - main_api - INFO -    🎬 Reference video: uploads/28f83ebe-e77f-42d4-b3ad-6b8e00dadadb.mp4
+2025-10-19 11:36:16,631 - main_api - INFO -    💾 Output: res/output/comparison_098d4f4c-740e-4344-8fcc-7cedac331c16.mp4
+2025-10-19 11:36:16,631 - main_api - INFO - 🤖 Initializing PoseComparison...
+2025-10-19 11:36:16,654 - main_api - INFO - ⚙️ Processing video files and creating side-by-side comparison...
+2025-10-19 11:36:19,756 - main_api - INFO - 🎯 ALGORITHM SENSITIVITY: 99.7%
+2025-10-19 11:36:19,756 - main_api - INFO -    ⏱️ Processing time: 4.150s
+2025-10-19 11:36:19,756 - main_api - INFO -    🎬 Frames processed: 82
+2025-10-19 11:36:19,756 - main_api - INFO - ⚠️ WARNING: Algorithm may be too lenient (high sensitivity score)
+2025-10-19 11:36:19,756 - main_api - INFO - 🎉 === DANCE SCORING METRICS COMPLETED ===
+2025-10-19 11:36:19,756 - main_api - INFO - 🏁 Video comparison thread finished
+2025-10-19 11:36:19,800 - main_api - INFO - ☁️ Đang upload video lên Cloudinary: res/output/comparison_fe633163-7929-4adf-af84-16f09e3ef43c.mp4
+2025-10-19 11:36:19,800 - cloudinary_helper - INFO - 📤 Uploading video to Cloudinary: res/output/comparison_fe633163-7929-4adf-af84-16f09e3ef43c.mp4
+2025-10-19 11:36:23,662 - cloudinary_helper - INFO - ✅ Video uploaded successfully: comparison_videos/comparison_video_fe633163-7929-4adf-af84-16f09e3ef43c
+2025-10-19 11:36:23,662 - main_api - INFO - ✅ Video uploaded to Cloudinary successfully: comparison_videos/comparison_video_fe633163-7929-4adf-af84-16f09e3ef43c
+2025-10-19 11:36:23,662 - main_api - INFO - 📺 Adaptive streaming URL: http://res.cloudinary.com/dgbotyfd4/video/upload/sp_auto/v1/comparison_videos/comparison_video_fe633163-7929-4adf-af84-16f09e3ef43c.m3u8
+2025-10-19 11:36:23,662 - main_api - INFO - 💾 Bắt đầu lưu kết quả vào database cho user: 2
+2025-10-19 11:36:23,663 - main_api - INFO - 📤 Gửi dữ liệu đến database manager...
+2025-10-19 11:36:23,663 - database_manager - INFO - 💾 Preparing to save video result to database...
+2025-10-19 11:36:23,663 - database_manager - INFO -    📋 Process Type: compare_videos
+2025-10-19 11:36:23,663 - database_manager - INFO -    👤 User ID: 2
+2025-10-19 11:36:23,663 - database_manager - INFO -    📝 Title: User8gmail
+2025-10-19 11:36:23,663 - database_manager - INFO -    🎬 Video URL: test.mp4
+2025-10-19 11:36:23,663 - database_manager - INFO -    ✅ Status: completed
+2025-10-19 11:36:23,663 - database_manager - INFO -    ⏱️ Processing Time: 7.982s
+2025-10-19 11:36:23,663 - database_manager - INFO -    📊 JSON Data Size: 1140 characters
+2025-10-19 11:36:23,748 - database_manager - INFO - 🔗 Executing INSERT query...
+2025-10-19 11:36:23,775 - database_manager - INFO - ✅ SUCCESS: Video result saved to database!
+2025-10-19 11:36:23,775 - database_manager - INFO -    🆔 Record ID: 56
+2025-10-19 11:36:23,775 - database_manager - INFO -    📊 Rows affected: 1
+2025-10-19 11:36:23,784 - main_api - INFO - ✅ Thành công! Đã lưu vào database với ID: 56
+2025-10-19 11:36:23,785 - main_api - INFO - 🧹 Starting cleanup for 2 files...
+2025-10-19 11:36:23,785 - main_api - INFO - 🗑️ Deleted: uploads/fe633163-7929-4adf-af84-16f09e3ef43c.mp4
+2025-10-19 11:36:23,787 - main_api - INFO - 🗑️ Deleted: uploads/a2700964-ba62-4a80-96f6-2a369d90dad0.mp4
+2025-10-19 11:36:33,283 - pose_comparison - INFO - 🔄 Converting res/output/temp_comparison_3a70fde2-615b-404a-83cb-27905b9e15fe.avi to H264 format...
+2025-10-19 11:36:34,318 - pose_comparison - INFO - ✅ Video conversion successful: res/output/comparison_098d4f4c-740e-4344-8fcc-7cedac331c16.mp4
+2025-10-19 11:36:34,320 - pose_comparison - INFO - ✅ Video saved successfully with H264 encoding: res/output/comparison_098d4f4c-740e-4344-8fcc-7cedac331c16.mp4
+2025-10-19 11:36:34,320 - main_api - INFO - ✅ Video comparison completed successfully!
+2025-10-19 11:36:34,320 - main_api - INFO -    📊 Side-by-side video saved to: res/output/comparison_098d4f4c-740e-4344-8fcc-7cedac331c16.mp4
+2025-10-19 11:36:34,320 - main_api - INFO -    💯 Average similarity score: 0.03%
+2025-10-19 11:36:34,320 - main_api - INFO - 🎯 === DANCE SCORING PERFORMANCE METRICS ===
+2025-10-19 11:36:34,320 - main_api - INFO - 🔄 Calculating baseline score (reference vs itself)...
+2025-10-19 11:36:34,320 - dance_scoring - INFO - 🔄 Bắt đầu tính baseline score cho: uploads/28f83ebe-e77f-42d4-b3ad-6b8e00dadadb.mp4
+2025-10-19 11:36:37,973 - main_api - INFO - 📊 BASELINE SCORE: 99.58%
+2025-10-19 11:36:37,973 - main_api - INFO -    ⏱️ Processing time: 3.652s
+2025-10-19 11:36:37,973 - main_api - INFO -    🎬 Frames processed: 86
+2025-10-19 11:36:37,973 - main_api - INFO - 🔄 Calculating algorithm sensitivity score...
+2025-10-19 11:36:37,973 - dance_scoring - INFO - 🔄 Bắt đầu tính sensitivity score
+2025-10-19 11:36:41,588 - main_api - INFO - 🎯 ALGORITHM SENSITIVITY: 99.58%
+2025-10-19 11:36:41,588 - main_api - INFO -    ⏱️ Processing time: 3.614s
+2025-10-19 11:36:41,588 - main_api - INFO -    🎬 Frames processed: 86
+2025-10-19 11:36:41,588 - main_api - INFO - ⚠️ WARNING: Algorithm may be too lenient (high sensitivity score)
+2025-10-19 11:36:41,588 - main_api - INFO - 🎉 === DANCE SCORING METRICS COMPLETED ===
+2025-10-19 11:36:41,588 - main_api - INFO - 🏁 Video comparison thread finished
+2025-10-19 11:36:41,634 - main_api - INFO - ☁️ Đang upload video lên Cloudinary: res/output/comparison_098d4f4c-740e-4344-8fcc-7cedac331c16.mp4
+2025-10-19 11:36:41,635 - cloudinary_helper - INFO - 📤 Uploading video to Cloudinary: res/output/comparison_098d4f4c-740e-4344-8fcc-7cedac331c16.mp4
+2025-10-19 11:36:44,986 - cloudinary_helper - INFO - ✅ Video uploaded successfully: comparison_videos/comparison_video_098d4f4c-740e-4344-8fcc-7cedac331c16
+2025-10-19 11:36:44,986 - main_api - INFO - ✅ Video uploaded to Cloudinary successfully: comparison_videos/comparison_video_098d4f4c-740e-4344-8fcc-7cedac331c16
+2025-10-19 11:36:44,987 - main_api - INFO - 📺 Adaptive streaming URL: http://res.cloudinary.com/dgbotyfd4/video/upload/sp_auto/v1/comparison_videos/comparison_video_098d4f4c-740e-4344-8fcc-7cedac331c16.m3u8
+2025-10-19 11:36:44,987 - main_api - INFO - 💾 Bắt đầu lưu kết quả vào database cho user: 2
+2025-10-19 11:36:44,987 - main_api - INFO - 📤 Gửi dữ liệu đến database manager...
+2025-10-19 11:36:44,987 - database_manager - INFO - 💾 Preparing to save video result to database...
+2025-10-19 11:36:44,987 - database_manager - INFO -    📋 Process Type: compare_videos
+2025-10-19 11:36:44,987 - database_manager - INFO -    👤 User ID: 2
+2025-10-19 11:36:44,987 - database_manager - INFO -    📝 Title: User8gmail
+2025-10-19 11:36:44,987 - database_manager - INFO -    🎬 Video URL: test.mp4
+2025-10-19 11:36:44,987 - database_manager - INFO -    ✅ Status: completed
+2025-10-19 11:36:44,988 - database_manager - INFO -    ⏱️ Processing Time: 7.266s
+2025-10-19 11:36:44,988 - database_manager - INFO -    📊 JSON Data Size: 1144 characters
+2025-10-19 11:36:45,096 - database_manager - INFO - 🔗 Executing INSERT query...
+2025-10-19 11:36:45,127 - database_manager - INFO - ✅ SUCCESS: Video result saved to database!
+2025-10-19 11:36:45,128 - database_manager - INFO -    🆔 Record ID: 57
+2025-10-19 11:36:45,128 - database_manager - INFO -    📊 Rows affected: 1
+2025-10-19 11:36:45,137 - main_api - INFO - ✅ Thành công! Đã lưu vào database với ID: 57
+2025-10-19 11:36:45,138 - main_api - INFO - 🧹 Starting cleanup for 2 files...
+2025-10-19 11:36:45,138 - main_api - INFO - 🗑️ Deleted: uploads/098d4f4c-740e-4344-8fcc-7cedac331c16.mp4
+2025-10-19 11:36:45,144 - main_api - INFO - 🗑️ Deleted: uploads/28f83ebe-e77f-42d4-b3ad-6b8e00dadadb.mp4
+2025-10-19 17:02:12,465 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-19 17:02:12,466 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-19 17:02:12,467 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-19 17:02:13,084 - database_manager - INFO - ✅ Database connection successful!
+2025-10-19 17:02:13,791 - database_manager - INFO - ✅ Table 'video3d' is ready!
+2025-10-19 17:02:13,805 - main_api - INFO - ✅ Database initialized successfully!
+2025-10-19 17:02:25,885 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-19 17:02:25,886 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-19 17:02:25,886 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-19 17:02:26,581 - database_manager - INFO - ✅ Database connection successful!
+2025-10-19 17:02:29,332 - database_manager - INFO - ✅ Table 'video3d' is ready!
+2025-10-19 17:02:29,347 - main_api - INFO - ✅ Database initialized successfully!
+2025-10-19 17:02:50,561 - main_api - INFO - 📹 Saved temporary video to: uploads/f53889d6-7708-4f56-aa8e-afca77ce2e19.mp4
+2025-10-19 17:02:50,802 - performance_metrics - INFO - 🚀 Started processing video: f53889d6-7708-4f56-aa8e-afca77ce2e19.mp4
+2025-10-19 17:02:50,802 - performance_metrics - INFO - 📊 Video info: 136.38s, 24.00 FPS, 3273 frames
+2025-10-19 17:04:36,994 - performance_metrics - INFO - ⏱️ pose_detection completed in 106.132s
+2025-10-19 17:04:42,015 - performance_metrics - INFO - ⏱️ pose_3d_estimation completed in 4.727s
+2025-10-19 17:04:43,867 - performance_metrics - INFO - ✅ Processing completed in 113.065s
+2025-10-19 17:04:43,867 - performance_metrics - INFO - 🚀 Overall FPS: 31.81
+2025-10-19 17:04:43,867 - performance_metrics - INFO - 📈 Detection rate: 3272/3273 frames (100.0%)
+2025-10-19 17:04:43,868 - performance_metrics - INFO - 👥 Average people per frame: 7.18
+2025-10-19 17:04:43,868 - performance_metrics - INFO - 💾 Performance metrics saved to: res/output/f53889d6-7708-4f56-aa8e-afca77ce2e19_performance_metrics.json
+2025-10-19 17:04:44,593 - main_api - INFO - 💾 Bắt đầu lưu kết quả vào database cho user: 1
+2025-10-19 17:04:45,633 - database_manager - INFO - 💾 Preparing to save video result to database...
+2025-10-19 17:04:45,633 - database_manager - INFO -    📋 Process Type: process_video_stream
+2025-10-19 17:04:45,633 - database_manager - INFO -    👤 User ID: 1
+2025-10-19 17:04:45,633 - database_manager - INFO -    📝 Title: tesst
+2025-10-19 17:04:45,634 - database_manager - INFO -    🎬 Video URL: videoplayback.mp4
+2025-10-19 17:04:45,634 - database_manager - INFO -    ✅ Status: completed
+2025-10-19 17:04:45,634 - database_manager - INFO -    ⏱️ Processing Time: 0.000s
+2025-10-19 17:04:45,634 - database_manager - INFO -    📊 JSON Data Size: 33618925 characters
+2025-10-19 17:04:45,765 - database_manager - INFO - 🔗 Executing INSERT query...
+2025-10-19 17:05:02,250 - database_manager - ERROR - ❌ Database connection error: 2055: Lost connection to MySQL server at '103.75.187.176:3308', system error: Errno 8: EOF occurred in violation of protocol (_ssl.c:2406)
+2025-10-19 17:05:02,252 - database_manager - ERROR - ❌ DATABASE ERROR: Failed to save video result!
+2025-10-19 17:05:02,252 - database_manager - ERROR -    🔍 MySQL Error Code: 2055
+2025-10-19 17:05:02,253 - database_manager - ERROR -    📄 Error Message: Lost connection to MySQL server at '103.75.187.176:3308', system error: Errno 1: [SSL: BAD_LENGTH] bad length (_ssl.c:2406)
+2025-10-19 17:05:02,253 - database_manager - ERROR -    💡 SQL State: None
+2025-10-19 17:05:02,253 - main_api - INFO - 🧹 Starting cleanup for 5 files...
+2025-10-19 17:05:02,254 - main_api - INFO - 🗑️ Deleted: uploads/f53889d6-7708-4f56-aa8e-afca77ce2e19.mp4
+2025-10-19 17:05:02,263 - main_api - INFO - 🗑️ Deleted: res/output/f53889d6-7708-4f56-aa8e-afca77ce2e19_3d_poses.json
+2025-10-19 17:05:02,264 - main_api - INFO - 🗑️ Deleted: res/output/f53889d6-7708-4f56-aa8e-afca77ce2e19_3d_poses.npy
+2025-10-19 17:05:02,277 - main_api - INFO - 🗑️ Deleted: res/output/f53889d6-7708-4f56-aa8e-afca77ce2e19_2d_poses.mp4
+2025-10-19 17:05:02,277 - main_api - INFO - 🗑️ Deleted: res/output/f53889d6-7708-4f56-aa8e-afca77ce2e19_performance_metrics.json
+2025-10-19 17:08:58,645 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-19 17:08:58,645 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-19 17:08:58,645 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-19 17:08:59,125 - database_manager - INFO - ✅ Database connection successful!
+2025-10-19 17:09:02,326 - database_manager - INFO - ✅ Table 'video3d' is ready!
+2025-10-19 17:09:02,469 - main_api - INFO - ✅ Database initialized successfully!
+2025-10-19 17:09:22,927 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-19 17:09:22,928 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-19 17:09:22,928 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-19 17:09:23,012 - database_manager - INFO - ✅ Database connection successful!
+2025-10-19 17:09:24,362 - database_manager - INFO - ✅ Table 'video3d' is ready!
+2025-10-19 17:09:24,421 - main_api - INFO - ✅ Database initialized successfully!
+2025-10-19 17:10:28,963 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-19 17:10:28,963 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-19 17:10:28,963 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-19 17:10:29,123 - database_manager - INFO - ✅ Database connection successful!
+2025-10-19 17:10:30,292 - database_manager - INFO - ✅ Table 'video3d' is ready!
+2025-10-19 17:10:30,352 - main_api - INFO - ✅ Database initialized successfully!
+2025-10-19 17:22:58,876 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-19 17:22:58,877 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-19 17:22:58,877 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-19 17:22:58,916 - database_manager - INFO - ✅ Database connection successful!
+2025-10-19 17:22:59,086 - database_manager - INFO - ✅ Table 'video3d' is ready!
+2025-10-19 17:22:59,095 - main_api - INFO - ✅ Database initialized successfully!
+2025-10-20 08:18:48,491 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-20 08:18:48,492 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-20 08:18:48,492 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-20 08:18:48,532 - database_manager - INFO - ✅ Database connection successful!
+2025-10-20 08:18:48,660 - database_manager - INFO - ✅ Table 'video3d' is ready!
+2025-10-20 08:18:48,668 - main_api - INFO - ✅ Database initialized successfully!
+2025-10-20 08:19:23,275 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-20 08:19:23,275 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-20 08:19:23,275 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-20 08:19:23,307 - database_manager - INFO - ✅ Database connection successful!
+2025-10-20 08:19:23,438 - database_manager - INFO - ✅ Table 'video3d' is ready!
+2025-10-20 08:19:23,443 - main_api - INFO - ✅ Database initialized successfully!
+2025-10-20 08:19:28,322 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-20 08:19:28,322 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-20 08:19:28,322 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-20 08:19:28,350 - database_manager - INFO - ✅ Database connection successful!
+2025-10-20 08:19:28,453 - database_manager - INFO - ✅ Table 'video3d' is ready!
+2025-10-20 08:19:28,457 - main_api - INFO - ✅ Database initialized successfully!
+2025-10-20 08:19:38,253 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-20 08:19:38,253 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-20 08:19:38,253 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-20 08:19:38,282 - database_manager - INFO - ✅ Database connection successful!
+2025-10-20 08:19:38,386 - database_manager - INFO - ✅ Table 'video3d' is ready!
+2025-10-20 08:19:38,396 - main_api - INFO - ✅ Database initialized successfully!
+2025-10-20 08:20:36,596 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-20 08:20:36,596 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-20 08:20:36,596 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-20 08:20:36,634 - database_manager - INFO - ✅ Database connection successful!
+2025-10-20 08:20:36,743 - database_manager - INFO - ✅ Table 'video3d' is ready!
+2025-10-20 08:20:36,750 - main_api - INFO - ✅ Database initialized successfully!
+2025-10-20 08:20:48,696 - main_api - INFO - 📹 Saved temporary video to: uploads/4e19cd48-f55a-4f5e-b6d0-67c3e4d0aab5.mp4
+2025-10-20 08:20:48,699 - main_api - INFO - 📹 Saved temporary video to: uploads/24ed15d5-4253-4086-9451-ebae4719cb7a.mp4
+2025-10-20 08:20:48,699 - main_api - INFO - 🔄 Starting video comparison process...
+2025-10-20 08:20:48,699 - main_api - INFO -    📹 User video: uploads/4e19cd48-f55a-4f5e-b6d0-67c3e4d0aab5.mp4
+2025-10-20 08:20:48,699 - main_api - INFO -    🎬 Reference video: uploads/24ed15d5-4253-4086-9451-ebae4719cb7a.mp4
+2025-10-20 08:20:48,699 - main_api - INFO -    💾 Output: res/output/comparison_4e19cd48-f55a-4f5e-b6d0-67c3e4d0aab5.mp4
+2025-10-20 08:20:48,699 - main_api - INFO - 🤖 Initializing PoseComparison...
+2025-10-20 08:20:48,777 - main_api - INFO - ⚙️ Processing video files and creating side-by-side comparison...
+2025-10-20 08:21:55,769 - pose_comparison - INFO - 🔄 Converting res/output/temp_comparison_0a282e2d-4267-4414-879f-94686e658eca.avi to H264 format...
+2025-10-20 08:21:58,382 - pose_comparison - INFO - ✅ Video conversion successful: res/output/comparison_4e19cd48-f55a-4f5e-b6d0-67c3e4d0aab5.mp4
+2025-10-20 08:21:58,385 - pose_comparison - INFO - ✅ Video saved successfully with H264 encoding: res/output/comparison_4e19cd48-f55a-4f5e-b6d0-67c3e4d0aab5.mp4
+2025-10-20 08:21:58,387 - main_api - INFO - ✅ Video comparison completed successfully!
+2025-10-20 08:21:58,387 - main_api - INFO -    📊 Side-by-side video saved to: res/output/comparison_4e19cd48-f55a-4f5e-b6d0-67c3e4d0aab5.mp4
+2025-10-20 08:21:58,387 - main_api - INFO -    💯 Average similarity score: 0.18%
+2025-10-20 08:21:58,387 - main_api - INFO - 🎯 === DANCE SCORING PERFORMANCE METRICS ===
+2025-10-20 08:21:58,387 - main_api - INFO -    🎵 Rhythm Score: 7.69%
+2025-10-20 08:21:58,387 - main_api - INFO -    🏃 Posture Score: 52.06%
+2025-10-20 08:21:58,387 - main_api - INFO -    💃 Movement Score: 1.98%
+2025-10-20 08:21:58,387 - main_api - INFO -    😊 Expression Score: 44.99%
+2025-10-20 08:21:58,387 - main_api - INFO -    ⭐ Total Dance Score: 16.90%
+2025-10-20 08:21:58,387 - main_api - INFO - 🔄 Calculating baseline score (reference vs itself)...
+2025-10-20 08:21:58,387 - dance_scoring - INFO - 🔄 Bắt đầu tính baseline score cho: uploads/24ed15d5-4253-4086-9451-ebae4719cb7a.mp4
+2025-10-20 08:22:03,195 - main_api - INFO - 📊 BASELINE SCORE: 93.75%
+2025-10-20 08:22:03,195 - main_api - INFO -    ⏱️ Processing time: 4.807s
+2025-10-20 08:22:03,195 - main_api - INFO -    🎬 Frames processed: 16
+2025-10-20 08:22:03,195 - main_api - INFO - 🔄 Calculating algorithm sensitivity score...
+2025-10-20 08:22:03,195 - dance_scoring - INFO - 🔄 Bắt đầu tính sensitivity score
+2025-10-20 08:22:07,973 - main_api - INFO - 🎯 ALGORITHM SENSITIVITY: 93.75%
+2025-10-20 08:22:07,973 - main_api - INFO -    ⏱️ Processing time: 4.777s
+2025-10-20 08:22:07,973 - main_api - INFO -    🎬 Frames processed: 16
+2025-10-20 08:22:07,973 - main_api - INFO - 🎉 === DANCE SCORING METRICS COMPLETED ===
+2025-10-20 08:22:07,973 - main_api - INFO - 🏁 Video comparison thread finished
+2025-10-20 08:22:08,023 - main_api - INFO - ☁️ Đang upload video lên Cloudinary: res/output/comparison_4e19cd48-f55a-4f5e-b6d0-67c3e4d0aab5.mp4
+2025-10-20 08:22:08,023 - cloudinary_helper - INFO - 📤 Uploading video to Cloudinary: res/output/comparison_4e19cd48-f55a-4f5e-b6d0-67c3e4d0aab5.mp4
+2025-10-20 08:22:24,458 - cloudinary_helper - INFO - ✅ Video uploaded successfully: comparison_videos/comparison_video_4e19cd48-f55a-4f5e-b6d0-67c3e4d0aab5
+2025-10-20 08:22:24,458 - main_api - INFO - ✅ Video uploaded to Cloudinary successfully: comparison_videos/comparison_video_4e19cd48-f55a-4f5e-b6d0-67c3e4d0aab5
+2025-10-20 08:22:24,460 - main_api - INFO - 📺 Adaptive streaming URL: http://res.cloudinary.com/dgbotyfd4/video/upload/sp_auto/v1/comparison_videos/comparison_video_4e19cd48-f55a-4f5e-b6d0-67c3e4d0aab5.m3u8
+2025-10-20 08:22:24,460 - main_api - INFO - 💾 Bắt đầu lưu kết quả vào database cho user: 1
+2025-10-20 08:22:24,460 - main_api - INFO - 📤 Gửi dữ liệu đến database manager...
+2025-10-20 08:22:24,475 - database_manager - INFO - 💾 Preparing to save video result to database...
+2025-10-20 08:22:24,475 - database_manager - INFO -    📋 Process Type: compare_videos
+2025-10-20 08:22:24,475 - database_manager - INFO -    👤 User ID: 1
+2025-10-20 08:22:24,475 - database_manager - INFO -    📝 Title: tesst
+2025-10-20 08:22:24,475 - database_manager - INFO -    🎬 Video URL: video1.mp4
+2025-10-20 08:22:24,475 - database_manager - INFO -    ✅ Status: completed
+2025-10-20 08:22:24,475 - database_manager - INFO -    ⏱️ Processing Time: 9.584s
+2025-10-20 08:22:24,475 - database_manager - INFO -    📊 JSON Data Size: 489079 characters
+2025-10-20 08:22:24,569 - database_manager - INFO - 🔗 Executing INSERT query...
+2025-10-20 08:22:24,686 - database_manager - INFO - ✅ SUCCESS: Video result saved to database!
+2025-10-20 08:22:24,686 - database_manager - INFO -    🆔 Record ID: 65
+2025-10-20 08:22:24,686 - database_manager - INFO -    📊 Rows affected: 1
+2025-10-20 08:22:24,699 - main_api - INFO - ✅ Thành công! Đã lưu vào database với ID: 65
+2025-10-20 08:22:24,699 - main_api - INFO - 📊 Đang tạo file Excel cho kết quả đánh giá...
+2025-10-20 08:22:24,872 - main_api - INFO - ✅ Dance scoring Excel exported successfully: res/output/dance_scoring_4e19cd48-f55a-4f5e-b6d0-67c3e4d0aab5.xlsx
+2025-10-20 08:22:24,872 - main_api - INFO - 🏁 Video comparison thread finished
+2025-10-20 08:22:24,872 - main_api - ERROR - ❌ Lỗi tạo file Excel: name 'result_queue' is not defined
+2025-10-20 08:22:24,877 - main_api - INFO - 🧹 Starting cleanup for 2 files...
+2025-10-20 08:22:24,878 - main_api - INFO - 🗑️ Deleted: uploads/4e19cd48-f55a-4f5e-b6d0-67c3e4d0aab5.mp4
+2025-10-20 08:22:24,878 - main_api - INFO - 🗑️ Deleted: uploads/24ed15d5-4253-4086-9451-ebae4719cb7a.mp4
+2025-10-20 09:17:04,275 - main_api - INFO - 📹 Saved temporary video to: uploads/4c82935c-5b2f-4c67-8a5b-b8619835ff7c.mp4
+2025-10-20 09:17:07,892 - performance_metrics - INFO - 🚀 Started processing video: 4c82935c-5b2f-4c67-8a5b-b8619835ff7c.mp4
+2025-10-20 09:17:07,893 - performance_metrics - INFO - 📊 Video info: 51.50s, 30.00 FPS, 1545 frames
+2025-10-20 09:17:23,971 - performance_metrics - INFO - ⏱️ pose_detection completed in 16.052s
+2025-10-20 09:17:24,432 - performance_metrics - INFO - ⏱️ pose_3d_estimation completed in 0.300s
+2025-10-20 09:17:24,446 - performance_metrics - INFO - ✅ Processing completed in 16.554s
+2025-10-20 09:17:24,447 - performance_metrics - INFO - 🚀 Overall FPS: 98.99
+2025-10-20 09:17:24,447 - performance_metrics - INFO - 📈 Detection rate: 1545/1545 frames (100.0%)
+2025-10-20 09:17:24,447 - performance_metrics - INFO - 👥 Average people per frame: 1.99
+2025-10-20 09:17:24,447 - performance_metrics - INFO - 💾 Performance metrics saved to: res/output/4c82935c-5b2f-4c67-8a5b-b8619835ff7c_performance_metrics.json
+2025-10-20 09:17:24,577 - main_api - INFO - 💾 Bắt đầu lưu kết quả vào database cho user: None
+2025-10-20 09:17:24,634 - database_manager - INFO - 💾 Preparing to save video result to database...
+2025-10-20 09:17:24,634 - database_manager - INFO -    📋 Process Type: process_video_stream
+2025-10-20 09:17:24,634 - database_manager - INFO -    👤 User ID: N/A
+2025-10-20 09:17:24,634 - database_manager - INFO -    📝 Title: process_video_stream - 20251020_091724
+2025-10-20 09:17:24,634 - database_manager - INFO -    🎬 Video URL: video1.mp4
+2025-10-20 09:17:24,634 - database_manager - INFO -    ✅ Status: completed
+2025-10-20 09:17:24,634 - database_manager - INFO -    ⏱️ Processing Time: 0.000s
+2025-10-20 09:17:24,634 - database_manager - INFO -    📊 JSON Data Size: 3521827 characters
+2025-10-20 09:17:24,739 - database_manager - INFO - 🔗 Executing INSERT query...
+2025-10-20 09:17:25,439 - database_manager - INFO - ✅ SUCCESS: Video result saved to database!
+2025-10-20 09:17:25,439 - database_manager - INFO -    🆔 Record ID: 72
+2025-10-20 09:17:25,439 - database_manager - INFO -    📊 Rows affected: 1
+2025-10-20 09:17:25,447 - main_api - INFO - ✅ Thành công! Đã lưu vào database với ID: 72
+2025-10-20 09:17:25,520 - main_api - INFO - 🧹 Starting cleanup for 5 files...
+2025-10-20 09:17:25,520 - main_api - INFO - 🗑️ Deleted: uploads/4c82935c-5b2f-4c67-8a5b-b8619835ff7c.mp4
+2025-10-20 09:17:25,521 - main_api - INFO - 🗑️ Deleted: res/output/4c82935c-5b2f-4c67-8a5b-b8619835ff7c_3d_poses.json
+2025-10-20 09:17:25,521 - main_api - INFO - 🗑️ Deleted: res/output/4c82935c-5b2f-4c67-8a5b-b8619835ff7c_3d_poses.npy
+2025-10-20 09:17:25,523 - main_api - INFO - 🗑️ Deleted: res/output/4c82935c-5b2f-4c67-8a5b-b8619835ff7c_2d_poses.mp4
+2025-10-20 09:17:25,523 - main_api - INFO - 🗑️ Deleted: res/output/4c82935c-5b2f-4c67-8a5b-b8619835ff7c_performance_metrics.json
+2025-10-20 09:20:15,734 - main_api - INFO - 📹 Saved temporary video to: uploads/6704e688-ba1f-474a-937e-a0a7b7233ab8.mp4
+2025-10-20 09:20:15,785 - performance_metrics - INFO - 🚀 Started processing video: 6704e688-ba1f-474a-937e-a0a7b7233ab8.mp4
+2025-10-20 09:20:15,785 - performance_metrics - INFO - 📊 Video info: 14.20s, 30.00 FPS, 426 frames
+2025-10-20 09:20:21,788 - performance_metrics - INFO - ⏱️ pose_detection completed in 5.878s
+2025-10-20 09:20:22,007 - performance_metrics - INFO - ⏱️ pose_3d_estimation completed in 0.061s
+2025-10-20 09:20:22,009 - performance_metrics - INFO - ✅ Processing completed in 6.224s
+2025-10-20 09:20:22,009 - performance_metrics - INFO - 🚀 Overall FPS: 20.12
+2025-10-20 09:20:22,010 - performance_metrics - INFO - 📈 Detection rate: 426/426 frames (100.0%)
+2025-10-20 09:20:22,010 - performance_metrics - INFO - 👥 Average people per frame: 1.00
+2025-10-20 09:20:22,019 - performance_metrics - INFO - 💾 Performance metrics saved to: res/output/6704e688-ba1f-474a-937e-a0a7b7233ab8_performance_metrics.json
+2025-10-20 09:20:22,126 - main_api - INFO - 💾 Bắt đầu lưu kết quả vào database cho user: None
+2025-10-20 09:20:22,140 - database_manager - INFO - 💾 Preparing to save video result to database...
+2025-10-20 09:20:22,140 - database_manager - INFO -    📋 Process Type: process_video_stream
+2025-10-20 09:20:22,140 - database_manager - INFO -    👤 User ID: N/A
+2025-10-20 09:20:22,140 - database_manager - INFO -    📝 Title: process_video_stream - 20251020_092022
+2025-10-20 09:20:22,140 - database_manager - INFO -    🎬 Video URL: video2.mp4
+2025-10-20 09:20:22,140 - database_manager - INFO -    ✅ Status: completed
+2025-10-20 09:20:22,140 - database_manager - INFO -    ⏱️ Processing Time: 0.000s
+2025-10-20 09:20:22,140 - database_manager - INFO -    📊 JSON Data Size: 476056 characters
+2025-10-20 09:20:22,238 - database_manager - INFO - 🔗 Executing INSERT query...
+2025-10-20 09:20:22,356 - database_manager - INFO - ✅ SUCCESS: Video result saved to database!
+2025-10-20 09:20:22,356 - database_manager - INFO -    🆔 Record ID: 73
+2025-10-20 09:20:22,356 - database_manager - INFO -    📊 Rows affected: 1
+2025-10-20 09:20:22,363 - main_api - INFO - ✅ Thành công! Đã lưu vào database với ID: 73
+2025-10-20 09:20:22,378 - main_api - INFO - 🧹 Starting cleanup for 5 files...
+2025-10-20 09:20:22,379 - main_api - INFO - 🗑️ Deleted: uploads/6704e688-ba1f-474a-937e-a0a7b7233ab8.mp4
+2025-10-20 09:20:22,379 - main_api - INFO - 🗑️ Deleted: res/output/6704e688-ba1f-474a-937e-a0a7b7233ab8_3d_poses.json
+2025-10-20 09:20:22,379 - main_api - INFO - 🗑️ Deleted: res/output/6704e688-ba1f-474a-937e-a0a7b7233ab8_3d_poses.npy
+2025-10-20 09:20:22,382 - main_api - INFO - 🗑️ Deleted: res/output/6704e688-ba1f-474a-937e-a0a7b7233ab8_2d_poses.mp4
+2025-10-20 09:20:22,382 - main_api - INFO - 🗑️ Deleted: res/output/6704e688-ba1f-474a-937e-a0a7b7233ab8_performance_metrics.json
+2025-10-20 09:22:08,816 - main_api - INFO - 📹 Saved temporary video to: uploads/b77ab015-30d2-42e2-b3ef-d98296b45bb1.mp4
+2025-10-20 09:22:08,879 - performance_metrics - INFO - 🚀 Started processing video: b77ab015-30d2-42e2-b3ef-d98296b45bb1.mp4
+2025-10-20 09:22:08,879 - performance_metrics - INFO - 📊 Video info: 14.43s, 30.00 FPS, 433 frames
+2025-10-20 09:22:20,265 - performance_metrics - INFO - ⏱️ pose_detection completed in 11.349s
+2025-10-20 09:22:20,675 - performance_metrics - INFO - ⏱️ pose_3d_estimation completed in 0.243s
+2025-10-20 09:22:20,686 - performance_metrics - INFO - ✅ Processing completed in 11.807s
+2025-10-20 09:22:20,686 - performance_metrics - INFO - 🚀 Overall FPS: 13.61
+2025-10-20 09:22:20,686 - performance_metrics - INFO - 📈 Detection rate: 433/433 frames (100.0%)
+2025-10-20 09:22:20,686 - performance_metrics - INFO - 👥 Average people per frame: 5.00
+2025-10-20 09:22:20,686 - performance_metrics - INFO - 💾 Performance metrics saved to: res/output/b77ab015-30d2-42e2-b3ef-d98296b45bb1_performance_metrics.json
+2025-10-20 09:22:20,801 - main_api - INFO - 💾 Bắt đầu lưu kết quả vào database cho user: None
+2025-10-20 09:22:20,847 - database_manager - INFO - 💾 Preparing to save video result to database...
+2025-10-20 09:22:20,847 - database_manager - INFO -    📋 Process Type: process_video_stream
+2025-10-20 09:22:20,847 - database_manager - INFO -    👤 User ID: N/A
+2025-10-20 09:22:20,847 - database_manager - INFO -    📝 Title: process_video_stream - 20251020_092220
+2025-10-20 09:22:20,847 - database_manager - INFO -    🎬 Video URL: 1019(1).mp4
+2025-10-20 09:22:20,847 - database_manager - INFO -    ✅ Status: completed
+2025-10-20 09:22:20,847 - database_manager - INFO -    ⏱️ Processing Time: 0.000s
+2025-10-20 09:22:20,847 - database_manager - INFO -    📊 JSON Data Size: 2464805 characters
+2025-10-20 09:22:20,954 - database_manager - INFO - 🔗 Executing INSERT query...
+2025-10-20 09:22:21,259 - database_manager - INFO - ✅ SUCCESS: Video result saved to database!
+2025-10-20 09:22:21,259 - database_manager - INFO -    🆔 Record ID: 75
+2025-10-20 09:22:21,259 - database_manager - INFO -    📊 Rows affected: 1
+2025-10-20 09:22:21,269 - main_api - INFO - ✅ Thành công! Đã lưu vào database với ID: 75
+2025-10-20 09:22:21,322 - main_api - INFO - 🧹 Starting cleanup for 5 files...
+2025-10-20 09:22:21,324 - main_api - INFO - 🗑️ Deleted: uploads/b77ab015-30d2-42e2-b3ef-d98296b45bb1.mp4
+2025-10-20 09:22:21,324 - main_api - INFO - 🗑️ Deleted: res/output/b77ab015-30d2-42e2-b3ef-d98296b45bb1_3d_poses.json
+2025-10-20 09:22:21,324 - main_api - INFO - 🗑️ Deleted: res/output/b77ab015-30d2-42e2-b3ef-d98296b45bb1_3d_poses.npy
+2025-10-20 09:22:21,328 - main_api - INFO - 🗑️ Deleted: res/output/b77ab015-30d2-42e2-b3ef-d98296b45bb1_2d_poses.mp4
+2025-10-20 09:22:21,328 - main_api - INFO - 🗑️ Deleted: res/output/b77ab015-30d2-42e2-b3ef-d98296b45bb1_performance_metrics.json

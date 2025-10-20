@@ -9,6 +9,8 @@ import threading
 import asyncio
 import traceback
 import logging
+from datetime import datetime
+from typing import Dict, Any
 from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -287,14 +289,22 @@ def run_video_comparison_in_thread(user_video_path, reference_video_path, output
         result_queue.put({"type": "progress", "step": "loading_videos", "message": "Loading video files...", "percentage": 10})
 
         logger.info(f"⚙️ Processing video files and creating side-by-side comparison...")
-        average_score, frame_scores = comparison.process_video_files(user_video_path, output_path, result_queue)
+        result_dict, frame_scores = comparison.process_video_files(user_video_path, output_path, result_queue)
 
         logger.info(f"✅ Video comparison completed successfully!")
         logger.info(f"   📊 Side-by-side video saved to: {output_path}")
+        average_score = result_dict['average_similarity_score']
         logger.info(f"   💯 Average similarity score: {average_score:.2f}%")
-        
+
         # 📊 DETAILED DANCE SCORING METRICS
         logger.info("🎯 === DANCE SCORING PERFORMANCE METRICS ===")
+        dance_metrics = result_dict.get('dance_scoring_metrics', {})
+
+        logger.info(f"   🎵 Rhythm Score: {dance_metrics.get('rhythm_score', 0):.2f}%")
+        logger.info(f"   🏃 Posture Score: {dance_metrics.get('posture_score', 0):.2f}%")
+        logger.info(f"   💃 Movement Score: {dance_metrics.get('movement_score', 0):.2f}%")
+        logger.info(f"   😊 Expression Score: {dance_metrics.get('expression_score', 0):.2f}%")
+        logger.info(f"   ⭐ Total Dance Score: {dance_metrics.get('total_score', 0):.2f}%")
         
         baseline_result = None
         sensitivity_result = None
@@ -366,22 +376,176 @@ def run_video_comparison_in_thread(user_video_path, reference_video_path, output
             "side_by_side_video_url": video_url,
             "average_similarity_score": average_score,
             "message": "Video comparison completed successfully",
-            "total_frames_processed": len(frame_scores),
+            "total_frames_processed": result_dict.get('total_frames_processed', len(frame_scores)),
             "score_range": {
                 "min": min(frame_scores) if frame_scores else 0,
                 "max": max(frame_scores) if frame_scores else 0,
                 "average": average_score
             },
+            # Thêm các chỉ số đánh giá khiêu vũ mới
             "dance_scoring_metrics": {
+                "rhythm_score": dance_metrics.get('rhythm_score', 0),
+                "posture_score": dance_metrics.get('posture_score', 0),
+                "movement_score": dance_metrics.get('movement_score', 0),
+                "expression_score": dance_metrics.get('expression_score', 0),
+                "total_score": dance_metrics.get('total_score', 0),
                 "baseline_score_percent": baseline_result.get('baseline_score_percent', 0) if baseline_result else 0,
                 "sensitivity_score_percent": sensitivity_result.get('sensitivity_score_percent', 0) if sensitivity_result else 0,
                 "baseline_processing_time": baseline_result.get('processing_time', 0) if baseline_result else 0,
                 "sensitivity_processing_time": sensitivity_result.get('processing_time', 0) if sensitivity_result else 0
-            }
+            },
+            # Chi tiết từng frame để xuất Excel
+            "frame_details": result_dict.get('frame_details', [])
         }
         
         result_queue.put({"type": "progress", "step": "completed", "message": "Comparison completed!", "percentage": 100})
         result_queue.put({"type": "result", "data": result_data})
+
+    except Exception as e:
+        error_str = traceback.format_exc()
+        error_msg = f"❌ Error in video comparison: {str(e)}"
+        logger.error(error_msg)
+        logger.debug(f"🔍 Debug info - User: {user_video_path}, Ref: {reference_video_path}")
+        logger.debug(f"📋 Full traceback: {error_str}")
+        result_queue.put({"type": "error", "data": error_msg})
+    finally:
+        logger.info(f"🏁 Video comparison thread finished")
+        result_queue.put({"type": "done"})
+
+
+def export_dance_scoring_to_excel(result_data: Dict[str, Any], request_id: str) -> str:
+    """
+    Xuất kết quả đánh giá khiêu vũ ra file Excel với 4 trường mới
+
+    Args:
+        result_data: Dữ liệu kết quả từ API
+        request_id: ID của request để tạo tên file
+
+    Returns:
+        Đường dẫn file Excel
+    """
+    try:
+        # Import pandas và các thư viện cần thiết
+        import pandas as pd
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from openpyxl.utils import get_column_letter
+
+        excel_filename = f"dance_scoring_{request_id}.xlsx"
+        excel_path = os.path.join(OUTPUTS_DIR, excel_filename)
+
+        # Chuẩn bị dữ liệu cho các sheet
+        overview_data = {
+            'Tiêu chí': ['Điểm tương đồng', 'Chuẩn nhịp', 'Tư thế', 'Động tác', 'Biểu cảm', 'Tổng điểm'],
+            'Điểm số': [
+                result_data.get('average_similarity_score', 0),
+                result_data.get('dance_scoring_metrics', {}).get('rhythm_score', 0),
+                result_data.get('dance_scoring_metrics', {}).get('posture_score', 0),
+                result_data.get('dance_scoring_metrics', {}).get('movement_score', 0),
+                result_data.get('dance_scoring_metrics', {}).get('expression_score', 0),
+                result_data.get('dance_scoring_metrics', {}).get('total_score', 0)
+            ]
+        }
+
+        # Tạo DataFrame cho sheet tổng quan
+        overview_df = pd.DataFrame(overview_data)
+
+        # Chuẩn bị dữ liệu chi tiết từng frame
+        frame_details = result_data.get('frame_details', [])
+        if frame_details:
+            details_df = pd.DataFrame(frame_details)
+            # Làm tròn các điểm số để dễ đọc
+            score_columns = ['similarity_score', 'rhythm_score', 'posture_score', 'movement_score', 'expression_score']
+            for col in score_columns:
+                if col in details_df.columns:
+                    details_df[col] = details_df[col].round(2)
+        else:
+            details_df = pd.DataFrame()
+
+        with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
+            # Sheet Tổng quan với định dạng đẹp
+            overview_df.to_excel(writer, sheet_name='Tổng quan', index=False, startrow=2)
+
+            workbook = writer.book
+            worksheet = writer.sheets['Tổng quan']
+
+            # Thêm tiêu đề chính
+            title_cell = worksheet.cell(row=1, column=1)
+            title_cell.value = "BÁO CÁO ĐÁNH GIÁ BIỂU DIỄN KHIÊU VŨ"
+            title_cell.font = Font(size=16, bold=True, color="000000")
+            worksheet.merge_cells('A1:F1')
+
+            # Căn giữa tiêu đề
+            title_cell.alignment = Alignment(horizontal='center')
+
+            # Định dạng header
+            header_font = Font(bold=True, color="FFFFFF")
+            header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+
+            for col_num in range(1, len(overview_df.columns) + 1):
+                cell = worksheet.cell(row=3, column=col_num)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = Alignment(horizontal='center')
+
+            # Định dạng các ô điểm số
+            score_fill = PatternFill(start_color="E6F3FF", end_color="E6F3FF", fill_type="solid")
+            for row_num in range(4, len(overview_df) + 4):
+                for col_num in range(2, len(overview_df.columns) + 1):
+                    cell = worksheet.cell(row=row_num, column=col_num)
+                    cell.fill = score_fill
+                    cell.alignment = Alignment(horizontal='center')
+
+            # Điều chỉnh độ rộng cột
+            for col_num in range(1, len(overview_df.columns) + 1):
+                col_letter = get_column_letter(col_num)
+                worksheet.column_dimensions[col_letter].width = 15
+
+            # Sheet Chi tiết từng frame
+            if not details_df.empty:
+                details_df.to_excel(writer, sheet_name='Chi tiết frame', index=False)
+
+                # Định dạng sheet chi tiết
+                detail_sheet = writer.sheets['Chi tiết frame']
+                detail_header_font = Font(bold=True, color="FFFFFF")
+                detail_header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+
+                # Định dạng header cho sheet chi tiết
+                for col_num in range(1, len(details_df.columns) + 1):
+                    cell = detail_sheet.cell(row=1, column=col_num)
+                    cell.font = detail_header_font
+                    cell.fill = detail_header_fill
+                    cell.alignment = Alignment(horizontal='center')
+
+                # Điều chỉnh độ rộng cột cho sheet chi tiết
+                for col_num in range(1, len(details_df.columns) + 1):
+                    col_letter = get_column_letter(col_num)
+                    if col_num <= 3:  # Các cột đầu (Frame, Timestamp, Similarity)
+                        detail_sheet.column_dimensions[col_letter].width = 12
+                    else:  # Các cột điểm số
+                        detail_sheet.column_dimensions[col_letter].width = 15
+
+            # Sheet Thông số kỹ thuật
+            technical_data = result_data.get('dance_scoring_metrics', {})
+            if technical_data:
+                tech_df = pd.DataFrame([{
+                    'Baseline Score (%)': technical_data.get('baseline_score_percent', 0),
+                    'Sensitivity Score (%)': technical_data.get('sensitivity_score_percent', 0),
+                    'Baseline Processing Time (s)': technical_data.get('baseline_processing_time', 0),
+                    'Sensitivity Processing Time (s)': technical_data.get('sensitivity_processing_time', 0),
+                    'Total Frames Processed': result_data.get('total_frames_processed', 0),
+                    'Processing Date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                }])
+                tech_df.to_excel(writer, sheet_name='Thông số kỹ thuật', index=False)
+
+        logger.info(f"✅ Dance scoring Excel exported successfully: {excel_path}")
+        return excel_path
+
+    except ImportError as e:
+        logger.error(f"❌ Missing required libraries for Excel export: {e}")
+        raise HTTPException(status_code=500, detail="Excel export not available - missing pandas/openpyxl")
+    except Exception as e:
+        logger.error(f"❌ Error exporting dance scoring to Excel: {e}")
+        raise HTTPException(status_code=500, detail=f"Excel export failed: {str(e)}")
 
     except Exception as e:
         error_str = traceback.format_exc()
@@ -495,6 +659,16 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
                                     logger.error(f"🔍 Chi tiết lỗi: {traceback.format_exc()}")
                                     # Continue processing even if database save fails
                             
+                            # Tạo file Excel với kết quả đánh giá chi tiết
+                            try:
+                                logger.info(f"📊 Đang tạo file Excel cho kết quả đánh giá...")
+                                excel_path = export_dance_scoring_to_excel(result_data, user_request_id)
+                                result_data['excel_download_url'] = f"/res/output/{os.path.basename(excel_path)}"
+                                logger.info(f"✅ Đã tạo file Excel thành công: {excel_path}")
+                            except Exception as excel_error:
+                                logger.error(f"❌ Lỗi tạo file Excel: {str(excel_error)}")
+                                # Không dừng xử lý nếu tạo Excel thất bại
+
                             yield {"event": "result", "data": json.dumps(result_data)}
                         elif message["type"] == "error":
                             error_data = message["data"]

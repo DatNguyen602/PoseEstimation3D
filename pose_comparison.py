@@ -11,6 +11,9 @@ import os
 import uuid
 from datetime import datetime
 
+# Import dance scoring calculator
+from dance_scoring_calculator import DanceScoringCalculator
+
 class PoseComparison:
     def __init__(self, reference_video_path):
         # Initialize MediaPipe
@@ -352,7 +355,179 @@ class PoseComparison:
             else:
                 progress_queue.put({"type": "progress", "step": "completed", "message": f"❌ Failed to save video", "percentage": 100})
 
-        return np.mean(scores) if scores else 0.0, scores
+    def process_video_files(self, user_video_path: str, output_path: str, progress_queue: 'queue.Queue'):
+        """
+        Compares a user's video against the reference video, saves a side-by-side comparison video,
+        and returns the average similarity score with detailed dance scoring metrics.
+        Reports progress via a queue.
+        """
+        user_cap = cv2.VideoCapture(user_video_path)
+        if not user_cap.isOpened():
+            raise ValueError(f"Could not open user video: {user_video_path}")
+
+        # Get video properties
+        ref_frame_count = int(self.ref_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        user_frame_count = int(user_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        total_frames = min(ref_frame_count, user_frame_count)
+
+        if total_frames == 0:
+            raise ValueError("One of the videos has 0 frames.")
+
+        user_fps = user_cap.get(cv2.CAP_PROP_FPS)
+        fps = min(self.ref_fps, user_fps) if self.ref_fps > 0 and user_fps > 0 else 30
+
+        # For the output video, we'll use the standard display size from _create_display
+        output_width = 640 * 2
+        output_height = 480
+
+        # Use XVID for intermediate format (more reliable than H264 in OpenCV)
+        temp_filename = f"temp_comparison_{uuid.uuid4()}.avi"
+        temp_path = os.path.join(os.path.dirname(output_path), temp_filename)
+
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Use XVID for better compatibility
+        video_writer = cv2.VideoWriter(temp_path, fourcc, fps, (output_width, output_height))
+
+        self.ref_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
+        progress_queue.put({"type": "progress", "step": "processing_frames", "message": f"Processing {total_frames} frames...", "percentage": 20})
+
+        scores = []
+        frame_count = 0
+
+        # Initialize dance scoring calculator
+        dance_calculator = DanceScoringCalculator()
+
+        # Store detailed data for each frame
+        frame_details = []
+        pose_data_sequence = []
+        timestamps = []
+
+        try:
+            for i in range(total_frames):
+                ret_ref, ref_frame = self.ref_cap.read()
+                ret_user, user_frame = user_cap.read()
+
+                if not ret_ref or not ret_user:
+                    break
+
+                user_keypoints, user_results = self._extract_keypoints(user_frame)
+                ref_keypoints, ref_results = self._extract_keypoints(ref_frame)
+
+                score, wrong_keypoints = self._calculate_score(user_keypoints, ref_keypoints)
+                scores.append(score)
+                frame_count += 1
+
+                # Calculate detailed dance scoring metrics for this frame
+                rhythm_score = 0.0
+                posture_score = 0.0
+                movement_score = 0.0
+                expression_score = 0.0
+
+                if user_keypoints is not None and ref_keypoints is not None:
+                    # Convert keypoints to numpy array if needed
+                    user_kp_array = np.array(user_keypoints).flatten() if user_keypoints is not None else None
+                    ref_kp_array = np.array(ref_keypoints).flatten() if ref_keypoints is not None else None
+
+                    # Calculate individual scores
+                    if user_kp_array is not None:
+                        posture_score = dance_calculator.calculate_posture_score(user_kp_array)
+                        expression_score = dance_calculator.calculate_expression_score(user_kp_array, user_results)
+
+                    if user_kp_array is not None and ref_kp_array is not None:
+                        movement_score = dance_calculator.calculate_movement_score(user_kp_array, ref_kp_array)
+
+                # Store frame data for rhythm calculation
+                current_time = i / fps if fps > 0 else i * 0.033  # Assume 30fps if unknown
+                frame_data = {
+                    'timestamp': current_time,
+                    'keypoints': user_keypoints.tolist() if user_keypoints is not None else [],
+                    'similarity_score': score
+                }
+                pose_data_sequence.append(frame_data)
+                timestamps.append(current_time)
+
+                # Calculate rhythm score (needs sequence data)
+                if len(pose_data_sequence) > 1:
+                    rhythm_score = dance_calculator.calculate_rhythm_score(pose_data_sequence, timestamps)
+
+                # Store detailed frame information
+                frame_details.append({
+                    'frame': i + 1,
+                    'timestamp': current_time,
+                    'similarity_score': score,
+                    'rhythm_score': rhythm_score,
+                    'posture_score': posture_score,
+                    'movement_score': movement_score,
+                    'expression_score': expression_score,
+                    'wrong_keypoints_count': len(wrong_keypoints),
+                    'wrong_keypoints': list(wrong_keypoints)
+                })
+
+                display_frame, _ = self._create_display(
+                    ref_frame, ref_results,
+                    user_frame, user_results, score, wrong_keypoints
+                )
+
+                video_writer.write(display_frame)
+
+                if i % 10 == 0:
+                    progress_percentage = 20 + int((i / total_frames) * 70)
+                    progress_message = f"Processed frame {i+1}/{total_frames} ({progress_percentage}%)"
+                    progress_queue.put({"type": "progress", "step": "processing_frames", "message": progress_message, "percentage": progress_percentage})
+
+        except Exception as e:
+            import traceback
+            progress_queue.put({"type": "error", "data": f"ERROR: {str(e)}\n{traceback.format_exc()}"})
+
+        finally:
+            user_cap.release()
+            self.ref_cap.release()
+            video_writer.release()
+
+            # Convert AVI to H264 MP4
+            if os.path.exists(temp_path):
+                progress_queue.put({"type": "progress", "step": "converting", "message": "Converting to H264 format...", "percentage": 95})
+
+                if self._convert_to_h264(temp_path, output_path):
+                    self.logger.info(f"✅ Video saved successfully with H264 encoding: {output_path}")
+                    progress_queue.put({"type": "progress", "step": "completed", "message": f"✅ Comparison video saved to {output_path}", "percentage": 100})
+                else:
+                    self.logger.error(f"❌ Failed to convert video to H264, falling back to renaming AVI.")
+                    # Move temp file to output path if conversion fails
+                    os.rename(temp_path, output_path)
+                    progress_queue.put({"type": "progress", "step": "completed", "message": f"⚠️ Video saved as AVI (H264 conversion failed): {output_path}", "percentage": 100})
+            else:
+                progress_queue.put({"type": "progress", "step": "completed", "message": f"❌ Failed to save video", "percentage": 100})
+
+        # Calculate final dance scoring metrics
+        average_score = np.mean(scores) if scores else 0.0
+
+        # Calculate overall scores from frame details
+        if frame_details:
+            final_rhythm_score = sum(f['rhythm_score'] for f in frame_details) / len(frame_details)
+            final_posture_score = sum(f['posture_score'] for f in frame_details) / len(frame_details)
+            final_movement_score = sum(f['movement_score'] for f in frame_details) / len(frame_details)
+            final_expression_score = sum(f['expression_score'] for f in frame_details) / len(frame_details)
+
+            # Calculate total score (weighted average)
+            total_score = (average_score * 0.3 + final_rhythm_score * 0.2 +
+                          final_posture_score * 0.2 + final_movement_score * 0.2 + final_expression_score * 0.1)
+        else:
+            final_rhythm_score = final_posture_score = final_movement_score = final_expression_score = 0.0
+            total_score = average_score
+
+        return {
+            'average_similarity_score': average_score,
+            'total_frames_processed': frame_count,
+            'frame_details': frame_details,
+            'dance_scoring_metrics': {
+                'rhythm_score': final_rhythm_score,
+                'posture_score': final_posture_score,
+                'movement_score': final_movement_score,
+                'expression_score': final_expression_score,
+                'total_score': total_score
+            }
+        }, scores
 
     def annotate_video(self, raw_user_video_path: str, annotated_output_path: str):
         """

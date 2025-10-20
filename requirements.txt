@@ -7,4 +7,7 @@ numpy
 opencv-python
 mediapipe
 cloudinary
+pandas>=2.0.0
+openpyxl>=3.1.0
 python-dotenv
+ffmpeg
