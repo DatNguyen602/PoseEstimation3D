@@ -670,6 +670,16 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
                                 # Không dừng xử lý nếu tạo Excel thất bại
 
                             yield {"event": "result", "data": json.dumps(result_data)}
+                            
+                            # Thêm một type result nữa để thông báo hoàn thành và tóm tắt
+                            yield {"event": "result", "data": json.dumps({
+                                "status": "completed",
+                                "message": "Video comparison completed successfully",
+                                "result_url": result_data.get('cloudinary_video_url', result_data.get('result_url')),
+                                "excel_url": result_data.get('excel_download_url'),
+                                "average_score": result_data.get('average_similarity_score'),
+                                "dance_metrics": result_data.get('dance_scoring_metrics', {})
+                            })}
                         elif message["type"] == "error":
                             error_data = message["data"]
                             
