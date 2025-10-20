@@ -61,9 +61,9 @@ class Pose3DEstimator:
         ]
         
         # Processing settings - Điều chỉnh cho tỷ lệ thành công tối đa
-        self.min_frames_threshold = 1  # Giảm xuống 1 frame duy nhất
-        self.confidence_threshold = 0.01  # Giảm xuống rất thấp
-        self.min_valid_keypoints = 1     # Chỉ cần 1 keypoint hợp lệ
+        self.min_frames_threshold = 10  # Giảm xuống 1 frame duy nhất
+        self.confidence_threshold = 0.1  # Giảm xuống rất thấp
+        self.min_valid_keypoints = 5     # Chỉ cần 1 keypoint hợp lệ
         
         print(f"✅ 3D Pose Estimator ready!")
         print(f"   Minimum frames per person: {self.min_frames_threshold}")
@@ -338,6 +338,10 @@ class Pose3DEstimator:
             else:
                 # Đừng loại bỏ poses - chỉ đánh dấu chúng là cần xử lý đặc biệt
                 # Với threshold thấp, hầu hết poses sẽ được giữ lại
+                if len(filtered_poses) > 0:
+                    filtered_poses.append(filtered_poses[-1])  # Repeat last valid pose
+                else:
+                    filtered_poses.append(pose)  # Keep original if no previous valid pose
                 filtered_poses.append(pose)
         
         filtered_count = len(filtered_poses)

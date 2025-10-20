@@ -23,6 +23,8 @@ from database_manager import db_manager
 from run_pipeline import run_full_pipeline
 # Import Cloudinary helper
 from cloudinary_helper import upload_comparison_video
+# Import Google Sheets helper
+from google_sheets_helper import GoogleSheetsHelper
 
 # Setup logging
 logging.basicConfig(
@@ -58,6 +60,27 @@ try:
         logger.error("❌ Failed to connect to database")
 except Exception as e:
     logger.error(f"❌ Database initialization failed: {e}")
+
+# Initialize Google Sheets helper
+sheets_helper = None
+try:
+    sheets_helper = GoogleSheetsHelper()
+    logger.info("✅ Google Sheets helper initialized successfully!")
+
+    # Kiểm tra quyền truy cập spreadsheet nếu đã cấu hình
+    if sheets_helper.spreadsheet_id and sheets_helper.spreadsheet_id != 'your_spreadsheet_id_here':
+        access_ok = sheets_helper.check_spreadsheet_access()
+        if not access_ok:
+            logger.warning("⚠️ Không thể truy cập Google Sheets được cấu hình")
+            logger.info("ℹ️ Hãy kiểm tra quyền chia sẻ spreadsheet với Service Account")
+        else:
+            logger.info("✅ Đã xác nhận quyền truy cập Google Sheets")
+    else:
+        logger.info("ℹ️ Google Sheets ID chưa được cấu hình - sẽ tạo spreadsheet mới khi cần")
+
+except Exception as e:
+    logger.warning(f"⚠️ Google Sheets helper initialization failed: {e}")
+    logger.info("ℹ️ Google Sheets integration will be disabled")
 
 # --- CORS Configuration ---
 origins = [
@@ -669,6 +692,34 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
                                 logger.error(f"❌ Lỗi tạo file Excel: {str(excel_error)}")
                                 # Không dừng xử lý nếu tạo Excel thất bại
 
+                            # 📊 TỰ ĐỘNG GHI VÀO GOOGLE SHEETS 📊
+                            if sheets_helper:
+                                try:
+                                    logger.info(f"📊 Đang ghi kết quả vào Google Sheets...")
+
+                                    # Đảm bảo có thể truy cập spreadsheet, tạo mới nếu cần
+                                    if not sheets_helper.ensure_spreadsheet_access():
+                                        logger.error("❌ Không thể truy cập hoặc tạo Google Sheets")
+                                        raise Exception("Google Sheets access failed")
+
+                                    # Ghi kết quả vào các sheet mặc định
+                                    sheets_helper.write_complete_result(result_data)
+
+                                    # Ghi vào sheet "Mô phỏng" với 5 trường đặc biệt và logic random
+                                    try:
+                                        sheets_helper.write_mophong_data(result_data, 'Mophong')
+                                        logger.info(f"✅ Đã ghi thành công vào sheet 'Mophong' với dữ liệu mô phỏng!")
+                                    except Exception as custom_error:
+                                        logger.error(f"❌ Lỗi ghi vào sheet 'Mophong': {str(custom_error)}")
+                                        # Không dừng xử lý nếu ghi sheet tùy chỉnh thất bại
+
+                                    logger.info(f"✅ Đã ghi thành công vào Google Sheets!")
+
+                                except Exception as sheets_error:
+                                    logger.error(f"❌ Lỗi ghi vào Google Sheets: {str(sheets_error)}")
+                                    logger.error(f"🔍 Chi tiết lỗi: {traceback.format_exc()}")
+                                    # Không dừng xử lý nếu ghi Google Sheets thất bại
+
                             yield {"event": "result", "data": json.dumps(result_data)}
                             
                             # Thêm một type result nữa để thông báo hoàn thành và tóm tắt
@@ -678,7 +729,8 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
                                 "result_url": result_data.get('cloudinary_video_url', result_data.get('result_url')),
                                 "excel_url": result_data.get('excel_download_url'),
                                 "average_score": result_data.get('average_similarity_score'),
-                                "dance_metrics": result_data.get('dance_scoring_metrics', {})
+                                "dance_metrics": result_data.get('dance_scoring_metrics', {}),
+                                "google_sheets_status": "success" if sheets_helper else "disabled"
                             })}
                         elif message["type"] == "error":
                             error_data = message["data"]
@@ -706,6 +758,37 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
                                     logger.error(f"❌ Thất bại khi lưu lỗi vào database: {str(db_error)}")
                                     logger.error(f"🔍 Chi tiết lỗi: {traceback.format_exc()}")
                                     # Continue processing even if database save fails
+                            
+                            # Ghi lỗi vào Google Sheets nếu có thể
+                            if sheets_helper:
+                                try:
+                                    # Đảm bảo có thể truy cập spreadsheet, tạo mới nếu cần
+                                    if sheets_helper.ensure_spreadsheet_access():
+                                        # Ghi lỗi vào sheet tổng quan
+                                        error_result = {
+                                            'error': error_data,
+                                            'input_video_url': user_video.filename,
+                                            'user_id': user_id,
+                                            'title': title or 'Video Comparison Failed',
+                                            'timestamp': datetime.now().isoformat()
+                                        }
+                                        sheets_helper.write_overview_data(error_result, 'Tongquan')
+                                        logger.info(f"✅ Đã ghi lỗi vào Google Sheets")
+
+                                        # Ghi lỗi vào sheet "Mô phỏng" với định dạng đơn giản
+                                        try:
+                                            error_columns = ['thời gian', 'trạng thái', 'thông báo lỗi']
+                                            error_data_custom = {
+                                                'timestamp': datetime.now().isoformat(),
+                                                'status': 'error',
+                                                'error_message': error_data
+                                            }
+                                            sheets_helper.write_custom_sheet(error_data_custom, 'Mophong', error_columns)
+                                            logger.info(f"✅ Đã ghi lỗi vào sheet 'Mophong'")
+                                        except Exception as custom_error:
+                                            logger.error(f"❌ Lỗi ghi lỗi vào sheet 'Mophong': {str(custom_error)}")
+                                except Exception as sheets_error:
+                                    logger.error(f"❌ Lỗi ghi lỗi vào Google Sheets: {str(sheets_error)}")
                             
                             yield {"event": "error", "data": error_data}
                             break
