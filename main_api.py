@@ -673,7 +673,7 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
                             
                             # Thêm một type result nữa để thông báo hoàn thành và tóm tắt
                             yield {"event": "result", "data": json.dumps({
-                                "status": "completed",
+                                "type": "completed",
                                 "message": "Video comparison completed successfully",
                                 "result_url": result_data.get('cloudinary_video_url', result_data.get('result_url')),
                                 "excel_url": result_data.get('excel_download_url'),
