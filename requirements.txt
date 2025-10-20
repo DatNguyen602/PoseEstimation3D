@@ -12,3 +12,4 @@ openpyxl>=3.1.0
 python-dotenv
 ffmpeg
 mysql-connector-python
+ultralytics
