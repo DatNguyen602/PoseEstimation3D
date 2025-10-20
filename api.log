@@ -5262,3 +5262,69 @@
 2025-10-20 09:52:02,576 - main_api - INFO - 🧹 Starting cleanup for 2 files...
 2025-10-20 09:52:02,576 - main_api - INFO - 🗑️ Deleted: uploads/08d9d089-5771-4717-a026-5a2b48a49523.mp4
 2025-10-20 09:52:02,576 - main_api - INFO - 🗑️ Deleted: uploads/0c39d877-c708-48a5-9096-b64f2c515a35.mp4
+2025-10-20 10:04:14,812 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-20 10:04:14,812 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-20 10:04:14,812 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-20 10:04:14,845 - database_manager - INFO - ✅ Database connection successful!
+2025-10-20 10:04:14,935 - database_manager - INFO - ✅ Table 'video3d' is ready!
+2025-10-20 10:04:14,941 - main_api - INFO - ✅ Database initialized successfully!
+2025-10-20 10:04:21,585 - main_api - INFO - 📹 Saved temporary video to: uploads/1575f044-dea5-4609-ba5b-b5ef76829980.mp4
+2025-10-20 10:04:21,586 - main_api - INFO - 📹 Saved temporary video to: uploads/3ac6ec67-3069-479c-bfdf-09a39bc0a9d4.mp4
+2025-10-20 10:04:21,587 - main_api - INFO - 🔄 Starting video comparison process...
+2025-10-20 10:04:21,587 - main_api - INFO -    📹 User video: uploads/1575f044-dea5-4609-ba5b-b5ef76829980.mp4
+2025-10-20 10:04:21,587 - main_api - INFO -    🎬 Reference video: uploads/3ac6ec67-3069-479c-bfdf-09a39bc0a9d4.mp4
+2025-10-20 10:04:21,587 - main_api - INFO -    💾 Output: res/output/comparison_1575f044-dea5-4609-ba5b-b5ef76829980.mp4
+2025-10-20 10:04:21,587 - main_api - INFO - 🤖 Initializing PoseComparison...
+2025-10-20 10:04:21,648 - main_api - INFO - ⚙️ Processing video files and creating side-by-side comparison...
+2025-10-20 10:04:38,457 - pose_comparison - INFO - 🔄 Converting res/output/temp_comparison_c0b0b835-654e-4bbd-ab1e-e5c1da3d38f0.avi to H264 format...
+2025-10-20 10:04:39,663 - pose_comparison - INFO - ✅ Video conversion successful: res/output/comparison_1575f044-dea5-4609-ba5b-b5ef76829980.mp4
+2025-10-20 10:04:39,665 - pose_comparison - INFO - ✅ Video saved successfully with H264 encoding: res/output/comparison_1575f044-dea5-4609-ba5b-b5ef76829980.mp4
+2025-10-20 10:04:39,666 - main_api - INFO - ✅ Video comparison completed successfully!
+2025-10-20 10:04:39,666 - main_api - INFO -    📊 Side-by-side video saved to: res/output/comparison_1575f044-dea5-4609-ba5b-b5ef76829980.mp4
+2025-10-20 10:04:39,666 - main_api - INFO -    💯 Average similarity score: 0.30%
+2025-10-20 10:04:39,666 - main_api - INFO - 🎯 === DANCE SCORING PERFORMANCE METRICS ===
+2025-10-20 10:04:39,666 - main_api - INFO -    🎵 Rhythm Score: 9.06%
+2025-10-20 10:04:39,666 - main_api - INFO -    🏃 Posture Score: 76.89%
+2025-10-20 10:04:39,666 - main_api - INFO -    💃 Movement Score: 1.10%
+2025-10-20 10:04:39,666 - main_api - INFO -    😊 Expression Score: 75.69%
+2025-10-20 10:04:39,666 - main_api - INFO -    ⭐ Total Dance Score: 25.07%
+2025-10-20 10:04:39,666 - main_api - INFO - 🔄 Calculating baseline score (reference vs itself)...
+2025-10-20 10:04:39,666 - dance_scoring - INFO - 🔄 Bắt đầu tính baseline score cho: uploads/3ac6ec67-3069-479c-bfdf-09a39bc0a9d4.mp4
+2025-10-20 10:04:43,060 - main_api - INFO - 📊 BASELINE SCORE: 99.85%
+2025-10-20 10:04:43,060 - main_api - INFO -    ⏱️ Processing time: 3.393s
+2025-10-20 10:04:43,060 - main_api - INFO -    🎬 Frames processed: 100
+2025-10-20 10:04:43,060 - main_api - INFO - 🔄 Calculating algorithm sensitivity score...
+2025-10-20 10:04:43,060 - dance_scoring - INFO - 🔄 Bắt đầu tính sensitivity score
+2025-10-20 10:04:46,664 - main_api - INFO - 🎯 ALGORITHM SENSITIVITY: 99.85%
+2025-10-20 10:04:46,664 - main_api - INFO -    ⏱️ Processing time: 3.604s
+2025-10-20 10:04:46,664 - main_api - INFO -    🎬 Frames processed: 100
+2025-10-20 10:04:46,664 - main_api - INFO - ⚠️ WARNING: Algorithm may be too lenient (high sensitivity score)
+2025-10-20 10:04:46,665 - main_api - INFO - 🎉 === DANCE SCORING METRICS COMPLETED ===
+2025-10-20 10:04:46,665 - main_api - INFO - 🏁 Video comparison thread finished
+2025-10-20 10:04:46,751 - main_api - INFO - ☁️ Đang upload video lên Cloudinary: res/output/comparison_1575f044-dea5-4609-ba5b-b5ef76829980.mp4
+2025-10-20 10:04:46,752 - cloudinary_helper - INFO - 📤 Uploading video to Cloudinary: res/output/comparison_1575f044-dea5-4609-ba5b-b5ef76829980.mp4
+2025-10-20 10:04:50,901 - cloudinary_helper - INFO - ✅ Video uploaded successfully: comparison_videos/comparison_video_1575f044-dea5-4609-ba5b-b5ef76829980
+2025-10-20 10:04:50,902 - main_api - INFO - ✅ Video uploaded to Cloudinary successfully: comparison_videos/comparison_video_1575f044-dea5-4609-ba5b-b5ef76829980
+2025-10-20 10:04:50,903 - main_api - INFO - 📺 Adaptive streaming URL: http://res.cloudinary.com/dgbotyfd4/video/upload/sp_auto/v1/comparison_videos/comparison_video_1575f044-dea5-4609-ba5b-b5ef76829980.m3u8
+2025-10-20 10:04:50,903 - main_api - INFO - 💾 Bắt đầu lưu kết quả vào database cho user: 1
+2025-10-20 10:04:50,903 - main_api - INFO - 📤 Gửi dữ liệu đến database manager...
+2025-10-20 10:04:50,908 - database_manager - INFO - 💾 Preparing to save video result to database...
+2025-10-20 10:04:50,908 - database_manager - INFO -    📋 Process Type: compare_videos
+2025-10-20 10:04:50,908 - database_manager - INFO -    👤 User ID: 1
+2025-10-20 10:04:50,908 - database_manager - INFO -    📝 Title: tesst
+2025-10-20 10:04:50,908 - database_manager - INFO -    🎬 Video URL: video.mp4
+2025-10-20 10:04:50,908 - database_manager - INFO -    ✅ Status: completed
+2025-10-20 10:04:50,908 - database_manager - INFO -    ⏱️ Processing Time: 6.997s
+2025-10-20 10:04:50,908 - database_manager - INFO -    📊 JSON Data Size: 151171 characters
+2025-10-20 10:04:51,016 - database_manager - INFO - 🔗 Executing INSERT query...
+2025-10-20 10:04:51,079 - database_manager - INFO - ✅ SUCCESS: Video result saved to database!
+2025-10-20 10:04:51,079 - database_manager - INFO -    🆔 Record ID: 88
+2025-10-20 10:04:51,079 - database_manager - INFO -    📊 Rows affected: 1
+2025-10-20 10:04:51,086 - main_api - INFO - ✅ Thành công! Đã lưu vào database với ID: 88
+2025-10-20 10:04:51,086 - main_api - INFO - 📊 Đang tạo file Excel cho kết quả đánh giá...
+2025-10-20 10:04:51,170 - main_api - INFO - ✅ Dance scoring Excel exported successfully: res/output/dance_scoring_1575f044-dea5-4609-ba5b-b5ef76829980.xlsx
+2025-10-20 10:04:51,170 - main_api - INFO - 🏁 Video comparison thread finished
+2025-10-20 10:04:51,170 - main_api - ERROR - ❌ Lỗi tạo file Excel: name 'result_queue' is not defined
+2025-10-20 10:04:51,172 - main_api - INFO - 🧹 Starting cleanup for 2 files...
+2025-10-20 10:04:51,172 - main_api - INFO - 🗑️ Deleted: uploads/1575f044-dea5-4609-ba5b-b5ef76829980.mp4
+2025-10-20 10:04:51,173 - main_api - INFO - 🗑️ Deleted: uploads/3ac6ec67-3069-479c-bfdf-09a39bc0a9d4.mp4
