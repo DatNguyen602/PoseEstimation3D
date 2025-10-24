@@ -26,3 +26,4 @@ motion_analysis.gif
 # Model files
 *.pt
 VideoPose3D/checkpoint/
+credentials.json

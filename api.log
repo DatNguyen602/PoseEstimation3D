@@ -7548,3 +7548,83 @@ googleapiclient.errors.HttpError: <HttpError 400 when requesting https://sheets.
 2025-10-20 17:04:21,045 - main_api - INFO - 🗑️ Deleted: res/output/7aed414b-3a26-45bb-801a-ea8b1cd1d877_3d_poses.npy
 2025-10-20 17:04:21,057 - main_api - INFO - 🗑️ Deleted: res/output/7aed414b-3a26-45bb-801a-ea8b1cd1d877_2d_poses.mp4
 2025-10-20 17:04:21,057 - main_api - INFO - 🗑️ Deleted: res/output/7aed414b-3a26-45bb-801a-ea8b1cd1d877_performance_metrics.json
+2025-10-21 00:31:54,671 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-21 00:31:54,672 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-21 00:31:54,672 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-21 00:31:54,725 - database_manager - INFO - ✅ Database connection successful!
+2025-10-21 00:31:54,954 - database_manager - INFO - ✅ Table 'video3d' is ready!
+2025-10-21 00:31:54,970 - main_api - INFO - ✅ Database initialized successfully!
+2025-10-21 00:31:54,980 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2025-10-21 00:31:54,984 - google_sheets_helper - INFO - ✅ Xác thực Google Sheets API thành công
+2025-10-21 00:31:54,984 - main_api - INFO - ✅ Google Sheets helper initialized successfully!
+2025-10-21 00:31:56,636 - google_sheets_helper - INFO - ✅ Có thể truy cập spreadsheet: Lỗi sai
+2025-10-21 00:31:56,637 - main_api - INFO - ✅ Đã xác nhận quyền truy cập Google Sheets
+2025-10-21 00:37:54,902 - main_api - INFO - 📹 Saved temporary video to: uploads/e33303af-d235-4cfd-9dd0-eadd1f7d9ae3.mp4
+2025-10-21 00:37:54,903 - main_api - INFO - 📹 Saved temporary video to: uploads/376f4168-96f3-46c6-8f7a-3901a8eb1fd3.mp4
+2025-10-21 00:37:54,904 - main_api - INFO - 🔄 Starting video comparison process...
+2025-10-21 00:37:54,904 - main_api - INFO -    📹 User video: uploads/e33303af-d235-4cfd-9dd0-eadd1f7d9ae3.mp4
+2025-10-21 00:37:54,904 - main_api - INFO -    🎬 Reference video: uploads/376f4168-96f3-46c6-8f7a-3901a8eb1fd3.mp4
+2025-10-21 00:37:54,904 - main_api - INFO -    💾 Output: res/output/comparison_e33303af-d235-4cfd-9dd0-eadd1f7d9ae3.mp4
+2025-10-21 00:37:54,904 - main_api - INFO - 🤖 Initializing PoseComparison...
+2025-10-21 00:37:54,982 - main_api - INFO - ⚙️ Processing video files and creating side-by-side comparison...
+2025-10-21 00:38:11,362 - pose_comparison - INFO - 🔄 Converting res/output/temp_comparison_b6e6ce42-2fc5-4abc-8273-6a2a911c0cf3.avi to H264 format...
+2025-10-21 00:38:12,979 - pose_comparison - INFO - ✅ Video conversion successful: res/output/comparison_e33303af-d235-4cfd-9dd0-eadd1f7d9ae3.mp4
+2025-10-21 00:38:12,982 - pose_comparison - INFO - ✅ Video saved successfully with H264 encoding: res/output/comparison_e33303af-d235-4cfd-9dd0-eadd1f7d9ae3.mp4
+2025-10-21 00:38:12,983 - main_api - INFO - ✅ Video comparison completed successfully!
+2025-10-21 00:38:12,983 - main_api - INFO -    📊 Side-by-side video saved to: res/output/comparison_e33303af-d235-4cfd-9dd0-eadd1f7d9ae3.mp4
+2025-10-21 00:38:12,983 - main_api - INFO -    💯 Average similarity score: 1.00%
+2025-10-21 00:38:12,983 - main_api - INFO - 🎯 === DANCE SCORING PERFORMANCE METRICS ===
+2025-10-21 00:38:12,983 - main_api - INFO -    🎵 Rhythm Score: 9.45%
+2025-10-21 00:38:12,983 - main_api - INFO -    🏃 Posture Score: 81.75%
+2025-10-21 00:38:12,983 - main_api - INFO -    💃 Movement Score: 83.75%
+2025-10-21 00:38:12,983 - main_api - INFO -    😊 Expression Score: 83.51%
+2025-10-21 00:38:12,983 - main_api - INFO -    ⭐ Total Dance Score: 43.64%
+2025-10-21 00:38:12,984 - main_api - INFO - 🔄 Calculating baseline score (reference vs itself)...
+2025-10-21 00:38:12,984 - dance_scoring - INFO - 🔄 Bắt đầu tính baseline score cho: uploads/376f4168-96f3-46c6-8f7a-3901a8eb1fd3.mp4
+2025-10-21 00:38:16,498 - main_api - INFO - 📊 BASELINE SCORE: 99.85%
+2025-10-21 00:38:16,498 - main_api - INFO -    ⏱️ Processing time: 3.513s
+2025-10-21 00:38:16,498 - main_api - INFO -    🎬 Frames processed: 100
+2025-10-21 00:38:16,498 - main_api - INFO - 🔄 Calculating algorithm sensitivity score...
+2025-10-21 00:38:16,498 - dance_scoring - INFO - 🔄 Bắt đầu tính sensitivity score
+2025-10-21 00:38:19,941 - main_api - INFO - 🎯 ALGORITHM SENSITIVITY: 99.85%
+2025-10-21 00:38:19,941 - main_api - INFO -    ⏱️ Processing time: 3.442s
+2025-10-21 00:38:19,942 - main_api - INFO -    🎬 Frames processed: 100
+2025-10-21 00:38:19,942 - main_api - INFO - ⚠️ WARNING: Algorithm may be too lenient (high sensitivity score)
+2025-10-21 00:38:19,942 - main_api - INFO - 🎉 === DANCE SCORING METRICS COMPLETED ===
+2025-10-21 00:38:19,942 - main_api - INFO - 🏁 Video comparison thread finished
+2025-10-21 00:38:19,950 - main_api - INFO - ☁️ Đang upload video lên Cloudinary: res/output/comparison_e33303af-d235-4cfd-9dd0-eadd1f7d9ae3.mp4
+2025-10-21 00:38:19,950 - cloudinary_helper - INFO - 📤 Uploading video to Cloudinary: res/output/comparison_e33303af-d235-4cfd-9dd0-eadd1f7d9ae3.mp4
+2025-10-21 00:38:26,612 - cloudinary_helper - INFO - ✅ Video uploaded successfully: comparison_videos/comparison_video_e33303af-d235-4cfd-9dd0-eadd1f7d9ae3
+2025-10-21 00:38:26,613 - main_api - INFO - ✅ Video uploaded to Cloudinary successfully: comparison_videos/comparison_video_e33303af-d235-4cfd-9dd0-eadd1f7d9ae3
+2025-10-21 00:38:26,614 - main_api - INFO - 📺 Adaptive streaming URL: http://res.cloudinary.com/dgbotyfd4/video/upload/sp_auto/v1/comparison_videos/comparison_video_e33303af-d235-4cfd-9dd0-eadd1f7d9ae3.m3u8
+2025-10-21 00:38:26,614 - main_api - INFO - 💾 Bắt đầu lưu kết quả vào database cho user: 1
+2025-10-21 00:38:26,614 - main_api - INFO - 📤 Gửi dữ liệu đến database manager...
+2025-10-21 00:38:26,617 - database_manager - INFO - 💾 Preparing to save video result to database...
+2025-10-21 00:38:26,618 - database_manager - INFO -    📋 Process Type: compare_videos
+2025-10-21 00:38:26,618 - database_manager - INFO -    👤 User ID: 1
+2025-10-21 00:38:26,618 - database_manager - INFO -    📝 Title: 1
+2025-10-21 00:38:26,618 - database_manager - INFO -    🎬 Video URL: video2.mp4
+2025-10-21 00:38:26,618 - database_manager - INFO -    ✅ Status: completed
+2025-10-21 00:38:26,618 - database_manager - INFO -    ⏱️ Processing Time: 6.955s
+2025-10-21 00:38:26,618 - database_manager - INFO -    📊 JSON Data Size: 114790 characters
+2025-10-21 00:38:26,705 - database_manager - INFO - 🔗 Executing INSERT query...
+2025-10-21 00:38:26,759 - database_manager - INFO - ✅ SUCCESS: Video result saved to database!
+2025-10-21 00:38:26,759 - database_manager - INFO -    🆔 Record ID: 147
+2025-10-21 00:38:26,759 - database_manager - INFO -    📊 Rows affected: 1
+2025-10-21 00:38:26,764 - main_api - INFO - ✅ Thành công! Đã lưu vào database với ID: 147
+2025-10-21 00:38:26,764 - main_api - INFO - 📊 Đang tạo file Excel cho kết quả đánh giá...
+2025-10-21 00:38:26,879 - main_api - INFO - ✅ Dance scoring Excel exported successfully: res/output/dance_scoring_e33303af-d235-4cfd-9dd0-eadd1f7d9ae3.xlsx
+2025-10-21 00:38:26,879 - main_api - INFO - 🏁 Video comparison thread finished
+2025-10-21 00:38:26,879 - main_api - ERROR - ❌ Lỗi tạo file Excel: name 'result_queue' is not defined
+2025-10-21 00:38:26,879 - main_api - INFO - 📊 Đang ghi kết quả vào Google Sheets...
+2025-10-21 00:38:33,182 - google_sheets_helper - INFO - ✅ Có thể truy cập spreadsheet: Lỗi sai
+2025-10-21 00:38:33,466 - google_sheets_helper - ERROR - ❌ Lỗi ghi dữ liệu tổng quan vào Google Sheets: <HttpError 400 when requesting https://sheets.googleapis.com/v4/spreadsheets/1tmJEirxVYFdvdJxA8tfMqX5fcWzRxtGv0WHV1NRNcxY/values/Tongquan%21A%3AZ:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS&alt=json returned "Unable to parse range: Tongquan!A:Z". Details: "Unable to parse range: Tongquan!A:Z">
+2025-10-21 00:38:33,466 - google_sheets_helper - ERROR - 💡 Nguyên nhân: Tên sheet có ký tự đặc biệt hoặc dấu tiếng Việt
+2025-10-21 00:38:33,466 - google_sheets_helper - INFO - 🔧 Khắc phục: Đổi tên sheet từ 'Tổng quan' thành 'Tongquan' (không dấu cách)
+2025-10-21 00:38:33,466 - google_sheets_helper - ERROR - ❌ Lỗi ghi toàn bộ kết quả vào Google Sheets: <HttpError 400 when requesting https://sheets.googleapis.com/v4/spreadsheets/1tmJEirxVYFdvdJxA8tfMqX5fcWzRxtGv0WHV1NRNcxY/values/Tongquan%21A%3AZ:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS&alt=json returned "Unable to parse range: Tongquan!A:Z". Details: "Unable to parse range: Tongquan!A:Z">
+2025-10-21 00:38:34,600 - google_sheets_helper - INFO - ✅ Đã ghi đè dữ liệu mô phỏng vào dòng 2 sheet 'Mophong' với điểm tổng: 99.9
+2025-10-21 00:38:34,600 - main_api - INFO - ✅ Đã ghi thành công vào sheet 'Mophong' với dữ liệu mô phỏng!
+2025-10-21 00:38:34,601 - main_api - INFO - ✅ Đã ghi thành công vào Google Sheets!
+2025-10-21 00:38:34,603 - main_api - INFO - 🧹 Starting cleanup for 2 files...
+2025-10-21 00:38:34,604 - main_api - INFO - 🗑️ Deleted: uploads/e33303af-d235-4cfd-9dd0-eadd1f7d9ae3.mp4
+2025-10-21 00:38:34,604 - main_api - INFO - 🗑️ Deleted: uploads/376f4168-96f3-46c6-8f7a-3901a8eb1fd3.mp4

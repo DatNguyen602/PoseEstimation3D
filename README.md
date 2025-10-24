@@ -24,6 +24,9 @@ Sau khi cài đặt xong, sử dụng lệnh sau để khởi động API server
 uvicorn main_api:app --reload
 ```
 
+
+source /home/minhdao/projects/Word/NCKH/PoseEstimation3D/.venv/bin/activate
+
 Server sẽ chạy tại địa chỉ `http://127.0.0.1:8000`.
 
 ## 2. Cách Test và Sử dụng API
