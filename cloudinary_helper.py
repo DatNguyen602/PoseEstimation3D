@@ -47,6 +47,7 @@ class CloudinaryHelper:
             upload_options = {
                 'resource_type': 'video',
                 'folder': folder,
+                'format': 'mp4',        # THÊM DÒNG NÀY → BẮT BUỘC CHUYỂN THÀNH MP4
                 **kwargs
             }
 

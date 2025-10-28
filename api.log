@@ -7628,3 +7628,74 @@ googleapiclient.errors.HttpError: <HttpError 400 when requesting https://sheets.
 2025-10-21 00:38:34,603 - main_api - INFO - 🧹 Starting cleanup for 2 files...
 2025-10-21 00:38:34,604 - main_api - INFO - 🗑️ Deleted: uploads/e33303af-d235-4cfd-9dd0-eadd1f7d9ae3.mp4
 2025-10-21 00:38:34,604 - main_api - INFO - 🗑️ Deleted: uploads/376f4168-96f3-46c6-8f7a-3901a8eb1fd3.mp4
+2025-10-24 22:55:54,179 - mysql.connector - INFO - package: mysql.connector.plugins
+2025-10-24 22:55:54,180 - mysql.connector - INFO - plugin_name: caching_sha2_password
+2025-10-24 22:55:54,180 - mysql.connector - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-10-24 22:55:54,349 - database_manager - INFO - ✅ Database connection successful!
+2025-10-24 22:55:54,778 - database_manager - INFO - ✅ Table 'video3d' is ready!
+2025-10-24 22:55:54,808 - main_api - INFO - ✅ Database initialized successfully!
+2025-10-24 22:55:54,815 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2025-10-24 22:55:54,817 - google_sheets_helper - INFO - ✅ Xác thực Google Sheets API thành công
+2025-10-24 22:55:54,817 - main_api - INFO - ✅ Google Sheets helper initialized successfully!
+2025-10-24 22:55:56,272 - google_sheets_helper - INFO - ✅ Có thể truy cập spreadsheet: Lỗi sai
+2025-10-24 22:55:56,272 - main_api - INFO - ✅ Đã xác nhận quyền truy cập Google Sheets
+2025-10-24 23:02:07,859 - main_api - INFO - 📹 Saved temporary video to: uploads/b891f7da-d72f-4b11-b264-991970c097f5.mp4
+2025-10-24 23:02:07,994 - performance_metrics - INFO - 🚀 Started processing video: b891f7da-d72f-4b11-b264-991970c097f5.mp4
+2025-10-24 23:02:07,994 - performance_metrics - INFO - 📊 Video info: 15.62s, 25.03 FPS, 391 frames
+2025-10-24 23:02:16,542 - performance_metrics - INFO - ⏱️ pose_detection completed in 8.421s
+2025-10-24 23:02:16,778 - performance_metrics - INFO - ⏱️ pose_3d_estimation completed in 0.053s
+2025-10-24 23:02:16,784 - performance_metrics - INFO - ✅ Processing completed in 8.789s
+2025-10-24 23:02:16,784 - performance_metrics - INFO - 🚀 Overall FPS: 51.36
+2025-10-24 23:02:16,784 - performance_metrics - INFO - 📈 Detection rate: 391/391 frames (100.0%)
+2025-10-24 23:02:16,784 - performance_metrics - INFO - 👥 Average people per frame: 1.00
+2025-10-24 23:02:16,784 - performance_metrics - INFO - 💾 Performance metrics saved to: res/output/b891f7da-d72f-4b11-b264-991970c097f5_performance_metrics.json
+2025-10-24 23:02:16,850 - main_api - INFO - 💾 Bắt đầu lưu kết quả vào database cho user: None
+2025-10-24 23:02:16,857 - database_manager - INFO - 💾 Preparing to save video result to database...
+2025-10-24 23:02:16,858 - database_manager - INFO -    📋 Process Type: process_video_stream
+2025-10-24 23:02:16,858 - database_manager - INFO -    👤 User ID: N/A
+2025-10-24 23:02:16,858 - database_manager - INFO -    📝 Title: process_video_stream - 20251024_230216
+2025-10-24 23:02:16,858 - database_manager - INFO -    🎬 Video URL: icuspoqrdnho0kp28uhd.mp4
+2025-10-24 23:02:16,858 - database_manager - INFO -    ✅ Status: completed
+2025-10-24 23:02:16,858 - database_manager - INFO -    ⏱️ Processing Time: 0.000s
+2025-10-24 23:02:16,858 - database_manager - INFO -    📊 JSON Data Size: 444690 characters
+2025-10-24 23:02:17,273 - database_manager - INFO - 🔗 Executing INSERT query...
+2025-10-24 23:02:17,857 - database_manager - INFO - ✅ SUCCESS: Video result saved to database!
+2025-10-24 23:02:17,857 - database_manager - INFO -    🆔 Record ID: 163
+2025-10-24 23:02:17,857 - database_manager - INFO -    📊 Rows affected: 1
+2025-10-24 23:02:17,907 - main_api - INFO - ✅ Thành công! Đã lưu vào database với ID: 163
+2025-10-24 23:02:17,918 - main_api - INFO - 🧹 Starting cleanup for 5 files...
+2025-10-24 23:02:17,927 - main_api - INFO - 🗑️ Deleted: uploads/b891f7da-d72f-4b11-b264-991970c097f5.mp4
+2025-10-24 23:02:17,927 - main_api - INFO - 🗑️ Deleted: res/output/b891f7da-d72f-4b11-b264-991970c097f5_3d_poses.json
+2025-10-24 23:02:17,927 - main_api - INFO - 🗑️ Deleted: res/output/b891f7da-d72f-4b11-b264-991970c097f5_3d_poses.npy
+2025-10-24 23:02:17,931 - main_api - INFO - 🗑️ Deleted: res/output/b891f7da-d72f-4b11-b264-991970c097f5_2d_poses.mp4
+2025-10-24 23:02:17,931 - main_api - INFO - 🗑️ Deleted: res/output/b891f7da-d72f-4b11-b264-991970c097f5_performance_metrics.json
+2025-10-24 23:04:27,670 - main_api - INFO - 📹 Saved temporary video to: uploads/5a9140b6-d70c-4b8e-9807-6586cac59358.mp4
+2025-10-24 23:04:27,726 - performance_metrics - INFO - 🚀 Started processing video: 5a9140b6-d70c-4b8e-9807-6586cac59358.mp4
+2025-10-24 23:04:27,726 - performance_metrics - INFO - 📊 Video info: 14.43s, 30.00 FPS, 433 frames
+2025-10-24 23:04:38,387 - performance_metrics - INFO - ⏱️ pose_detection completed in 10.628s
+2025-10-24 23:04:38,734 - performance_metrics - INFO - ⏱️ pose_3d_estimation completed in 0.223s
+2025-10-24 23:04:38,742 - performance_metrics - INFO - ✅ Processing completed in 11.016s
+2025-10-24 23:04:38,742 - performance_metrics - INFO - 🚀 Overall FPS: 24.55
+2025-10-24 23:04:38,742 - performance_metrics - INFO - 📈 Detection rate: 433/433 frames (100.0%)
+2025-10-24 23:04:38,742 - performance_metrics - INFO - 👥 Average people per frame: 5.00
+2025-10-24 23:04:38,742 - performance_metrics - INFO - 💾 Performance metrics saved to: res/output/5a9140b6-d70c-4b8e-9807-6586cac59358_performance_metrics.json
+2025-10-24 23:04:38,836 - main_api - INFO - 💾 Bắt đầu lưu kết quả vào database cho user: None
+2025-10-24 23:04:38,876 - database_manager - INFO - 💾 Preparing to save video result to database...
+2025-10-24 23:04:38,876 - database_manager - INFO -    📋 Process Type: process_video_stream
+2025-10-24 23:04:38,876 - database_manager - INFO -    👤 User ID: N/A
+2025-10-24 23:04:38,876 - database_manager - INFO -    📝 Title: process_video_stream - 20251024_230438
+2025-10-24 23:04:38,876 - database_manager - INFO -    🎬 Video URL: 1019(1).mp4
+2025-10-24 23:04:38,876 - database_manager - INFO -    ✅ Status: completed
+2025-10-24 23:04:38,876 - database_manager - INFO -    ⏱️ Processing Time: 0.000s
+2025-10-24 23:04:38,876 - database_manager - INFO -    📊 JSON Data Size: 2464805 characters
+2025-10-24 23:04:39,208 - database_manager - INFO - 🔗 Executing INSERT query...
+2025-10-24 23:04:40,886 - database_manager - INFO - ✅ SUCCESS: Video result saved to database!
+2025-10-24 23:04:40,886 - database_manager - INFO -    🆔 Record ID: 164
+2025-10-24 23:04:40,886 - database_manager - INFO -    📊 Rows affected: 1
+2025-10-24 23:04:40,930 - main_api - INFO - ✅ Thành công! Đã lưu vào database với ID: 164
+2025-10-24 23:04:40,979 - main_api - INFO - 🧹 Starting cleanup for 5 files...
+2025-10-24 23:04:40,981 - main_api - INFO - 🗑️ Deleted: uploads/5a9140b6-d70c-4b8e-9807-6586cac59358.mp4
+2025-10-24 23:04:40,982 - main_api - INFO - 🗑️ Deleted: res/output/5a9140b6-d70c-4b8e-9807-6586cac59358_3d_poses.json
+2025-10-24 23:04:40,982 - main_api - INFO - 🗑️ Deleted: res/output/5a9140b6-d70c-4b8e-9807-6586cac59358_3d_poses.npy
+2025-10-24 23:04:40,985 - main_api - INFO - 🗑️ Deleted: res/output/5a9140b6-d70c-4b8e-9807-6586cac59358_2d_poses.mp4
+2025-10-24 23:04:40,985 - main_api - INFO - 🗑️ Deleted: res/output/5a9140b6-d70c-4b8e-9807-6586cac59358_performance_metrics.json
