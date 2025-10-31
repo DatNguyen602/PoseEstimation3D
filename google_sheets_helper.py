@@ -364,48 +364,21 @@ class GoogleSheetsHelper:
             logger.error(f"❌ Lỗi ghi toàn bộ kết quả vào Google Sheets: {e}")
             
     def write_mophong_data(self, data, sheet_name='Mophong'):
-        """Ghi dữ liệu vào sheet Mô phỏng - GHI ĐÈ DÒNG 2"""
+        """Ghi dữ liệu điểm đã được đồng bộ vào sheet Mô phỏng - GHI ĐÈ DÒNG 2"""
         try:
             if not self.spreadsheet_id:
                 raise ValueError("Spreadsheet ID chưa được thiết lập")
 
-            # Lấy điểm tổng từ API hoặc dùng điểm giả lập
-            diem_tong = round(data.get('average_similarity_score', 0) * 100, 2) if data.get('average_similarity_score') is not None else random.uniform(70, 95)
-            diem_tong = round(diem_tong, 1)
-
-            # Tạo các điểm thành phần với trung bình cộng = điểm tổng
-            scores = {}
-            # SỬA LỖI: Thay max(60, ...) bằng max(0, ...) để điểm có thể thấp hơn 60
-            scores['Chuannhip'] = diem_tong + random.uniform(-5, 5)
-            scores['Chuannhip'] = max(0, min(100, scores['Chuannhip']))
-            scores['Tuthe'] = diem_tong + random.uniform(-4, 4)
-            scores['Tuthe'] = max(0, min(100, scores['Tuthe']))
-            scores['Dongtactay'] = diem_tong + random.uniform(-6, 6)
-            scores['Dongtactay'] = max(0, min(100, scores['Dongtactay']))
-            scores['Bieucam'] = diem_tong + random.uniform(-3, 3)
-            scores['Bieucam'] = max(0, min(100, scores['Bieucam']))
-            scores['điểm tổng'] = diem_tong
-
-            # Điều chỉnh các điểm để trung bình cộng = điểm tổng
-            score_cols = ['Chuannhip', 'Tuthe', 'Dongtactay', 'Bieucam']
-            score_values = [scores[col] for col in score_cols]
+            # Lấy điểm từ `dance_scoring_metrics` đã được tính toán và đồng bộ trước đó
+            scores = data.get('dance_scoring_metrics', {})
             
-            # Chỉ điều chỉnh nếu có điểm
-            if score_values:
-                current_avg = sum(score_values) / len(score_values)
-                if current_avg != diem_tong:
-                    diff_per_score = (diem_tong - current_avg) / len(score_values)
-                    for col in score_cols:
-                        # SỬA LỖI: Thay max(60, ...) bằng max(0, ...)
-                        scores[col] = max(0, min(100, scores[col] + diff_per_score))
-
-            # Chuẩn bị dữ liệu - chỉ 5 giá trị cho 5 cột
+            # Chuẩn bị dữ liệu - 5 giá trị cho 5 cột theo thứ tự của sheet
             values = [
-                round(scores['Chuannhip'], 1),
-                round(scores['Tuthe'], 1),
-                round(scores['Dongtactay'], 1),
-                round(scores['Bieucam'], 1),
-                round(scores['điểm tổng'], 2)
+                scores.get('rhythm_score', 0),    # Tương ứng với Chuannhip
+                scores.get('posture_score', 0),   # Tương ứng với Tuthe
+                scores.get('movement_score', 0),  # Tương ứng với Dongtactay
+                scores.get('expression_score', 0),# Tương ứng với Bieucam
+                scores.get('total_score', 0)      # Tương ứng với điểm tổng
             ]
 
             # Ghi đè vào dòng 2 (A2:E2)
@@ -419,7 +392,7 @@ class GoogleSheetsHelper:
                 body=body
             ).execute()
 
-            logger.info(f"✅ Đã ghi đè dữ liệu mô phỏng vào dòng 2 sheet '{sheet_name}' với điểm tổng: {diem_tong}")
+            logger.info(f"✅ Đã ghi đè dữ liệu mô phỏng vào dòng 2 sheet '{sheet_name}'")
             return result
 
         except HttpError as error:

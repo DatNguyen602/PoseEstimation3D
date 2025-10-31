@@ -99,29 +99,6 @@ class PoseComparison:
         """
         h, w, _ = frame.shape
 
-        # 1. Draw the reference pose "ghost" first (if provided)
-        # COMMENTED OUT TO FIX GRAY BLURRY FRAMES ISSUE
-        # if ghost_results and ghost_results.pose_landmarks:
-        #     ghost_color = (220, 220, 220)  # Light grey for the ghost
-        #     ghost_landmarks = ghost_results.pose_landmarks.landmark
-        # 
-        #     # Create a transparent overlay for the ghost
-        #     overlay = frame.copy()
-        #     alpha = 0.4 # Transparency factor
-        # 
-        #     for connection in self.mp_pose.POSE_CONNECTIONS:
-        #         start_idx, end_idx = connection
-        #         start = ghost_landmarks[start_idx]
-        #         end = ghost_landmarks[end_idx]
-        # 
-        #         if start.visibility > 0.5 and end.visibility > 0.5:
-        #             start_point = (int(start.x * w), int(start.y * h))
-        #             end_point = (int(end.x * w), int(end.y * h))
-        #             cv2.line(overlay, start_point, end_point, ghost_color, 2)
-        # 
-        #     frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
-
-
         # 2. Draw the user's pose with error highlighting
         if main_results and main_results.pose_landmarks:
             main_landmarks = main_results.pose_landmarks.landmark
@@ -157,7 +134,6 @@ class PoseComparison:
         height, width = 480, 640
         
         # --- Reference Pane ---
-        # Simple display of the reference pose
         if ref_frame is not None:
             ref_display = cv2.resize(ref_frame, (width, height))
             if ref_results and ref_results.pose_landmarks:
@@ -169,7 +145,6 @@ class PoseComparison:
                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         
         # --- User Pane ---
-        # Advanced display with ghost and error coloring
         user_display = cv2.resize(user_frame, (width, height))
         user_display = self._draw_pose(
             user_display, 
@@ -178,23 +153,19 @@ class PoseComparison:
             ghost_results=ref_results
         )
         
-        # Create combined display
         combined = np.hstack([ref_display, user_display])
         
-        # Add labels
         cv2.putText(combined, "Sample Pose", (20, 30), 
                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         cv2.putText(combined, "Your Pose", (width + 20, 30), 
                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         
-        # Add score
         score_text = f"Score: {int(score * 100)}%"
         score_color = (0, 255, 0) if score > 0.7 else (0, 165, 255) if score > 0.4 else (0, 0, 255)
         
         cv2.putText(combined, score_text, (width + 20, height - 40), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.75, score_color, 2)
         
-        # Add correct/wrong keypoints count
         if wrong_keypoints is not None:
             total_keypoints = 33
             correct_keypoints = total_keypoints - len(wrong_keypoints)
@@ -209,7 +180,7 @@ class PoseComparison:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         self.output_filename = f"your_pose_{timestamp}.mp4"
         
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Use XVID for better compatibility
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
         self.video_writer = cv2.VideoWriter(
             self.output_filename,
             fourcc,
@@ -231,25 +202,20 @@ class PoseComparison:
     def _write_frame(self, frame, score, wrong_keypoints):
         """Write frame to video with score overlay"""
         if self.is_recording and self.video_writer is not None:
-            # Create a copy to add score overlay
             frame_with_score = frame.copy()
             
-            # Add score
             score_text = f"Score: {int(score * 100)}%"
             score_color = (0, 255, 0) if score > 0.7 else (0, 165, 255) if score > 0.4 else (0, 0, 255)
             
-            # Score background for better visibility
             (text_width, text_height), baseline = cv2.getTextSize(
                 score_text, cv2.FONT_HERSHEY_SIMPLEX, 1.2, 3
             )
             cv2.rectangle(frame_with_score, (10, 10), 
                          (text_width + 30, text_height + 30), (0, 0, 0), -1)
             
-            # Score text
             cv2.putText(frame_with_score, score_text, (20, text_height + 20), 
                        cv2.FONT_HERSHEY_SIMPLEX, 1.2, score_color, 3)
             
-            # Add correct/wrong count
             total_keypoints = 33
             correct_keypoints = total_keypoints - len(wrong_keypoints)
             count_text = f"Correct: {correct_keypoints}/{total_keypoints}"
@@ -257,103 +223,12 @@ class PoseComparison:
             cv2.putText(frame_with_score, count_text, (20, text_height + 60), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
             
-            # Add timestamp
-            from datetime import datetime
             timestamp = datetime.now().strftime('%H:%M:%S')
             cv2.putText(frame_with_score, timestamp, (20, frame_with_score.shape[0] - 20), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 2)
             
             
             self.video_writer.write(frame_with_score)
-
-    def process_video_files(self, user_video_path: str, output_path: str, progress_queue: 'queue.Queue'):
-        """
-        Compares a user's video against the reference video, saves a side-by-side comparison video,
-        and returns the average similarity score.
-        Reports progress via a queue.
-        """
-        user_cap = cv2.VideoCapture(user_video_path)
-        if not user_cap.isOpened():
-            raise ValueError(f"Could not open user video: {user_video_path}")
-
-        # Get video properties
-        ref_frame_count = int(self.ref_cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        user_frame_count = int(user_cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        total_frames = min(ref_frame_count, user_frame_count)
-
-        if total_frames == 0:
-            raise ValueError("One of the videos has 0 frames.")
-
-        user_fps = user_cap.get(cv2.CAP_PROP_FPS)
-        fps = min(self.ref_fps, user_fps) if self.ref_fps > 0 and user_fps > 0 else 30
-
-        # For the output video, we'll use the standard display size from _create_display
-        output_width = 640 * 2
-        output_height = 480
-
-        # Use XVID for intermediate format (more reliable than H264 in OpenCV)
-        temp_filename = f"temp_comparison_{uuid.uuid4()}.avi"
-        temp_path = os.path.join(os.path.dirname(output_path), temp_filename)
-
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Use XVID for better compatibility
-        video_writer = cv2.VideoWriter(temp_path, fourcc, fps, (output_width, output_height))
-
-        self.ref_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-
-        progress_queue.put({"type": "progress", "step": "processing_frames", "message": f"Processing {total_frames} frames...", "percentage": 20})
-
-        scores = []
-        frame_count = 0
-        try:
-            for i in range(total_frames):
-                ret_ref, ref_frame = self.ref_cap.read()
-                ret_user, user_frame = user_cap.read()
-
-                if not ret_ref or not ret_user:
-                    break
-
-                user_keypoints, user_results = self._extract_keypoints(user_frame)
-                ref_keypoints, ref_results = self._extract_keypoints(ref_frame)
-
-                score, wrong_keypoints = self._calculate_score(user_keypoints, ref_keypoints)
-                scores.append(score)
-                frame_count += 1
-
-                display_frame, _ = self._create_display(
-                    ref_frame, ref_results,
-                    user_frame, user_results, score, wrong_keypoints
-                )
-
-                video_writer.write(display_frame)
-
-                if i % 10 == 0:
-                    progress_percentage = 20 + int((i / total_frames) * 70)
-                    progress_message = f"Processed frame {i+1}/{total_frames} ({progress_percentage}%)"
-                    progress_queue.put({"type": "progress", "step": "processing_frames", "message": progress_message, "percentage": progress_percentage})
-
-        except Exception as e:
-            import traceback
-            progress_queue.put({"type": "error", "data": f"ERROR: {str(e)}\n{traceback.format_exc()}"})
-
-        finally:
-            user_cap.release()
-            self.ref_cap.release()
-            video_writer.release()
-
-            # Convert AVI to H264 MP4
-            if os.path.exists(temp_path):
-                progress_queue.put({"type": "progress", "step": "converting", "message": "Converting to H264 format...", "percentage": 95})
-
-                if self._convert_to_h264(temp_path, output_path):
-                    self.logger.info(f"✅ Video saved successfully with H264 encoding: {output_path}")
-                    progress_queue.put({"type": "progress", "step": "completed", "message": f"✅ Comparison video saved to {output_path}", "percentage": 100})
-                else:
-                    self.logger.error(f"❌ Failed to convert video to H264, falling back to renaming AVI.")
-                    # Move temp file to output path if conversion fails
-                    os.rename(temp_path, output_path)
-                    progress_queue.put({"type": "progress", "step": "completed", "message": f"⚠️ Video saved as AVI (H264 conversion failed): {output_path}", "percentage": 100})
-            else:
-                progress_queue.put({"type": "progress", "step": "completed", "message": f"❌ Failed to save video", "percentage": 100})
 
     def process_video_files(self, user_video_path: str, output_path: str, progress_queue: 'queue.Queue'):
         """
@@ -376,15 +251,13 @@ class PoseComparison:
         user_fps = user_cap.get(cv2.CAP_PROP_FPS)
         fps = min(self.ref_fps, user_fps) if self.ref_fps > 0 and user_fps > 0 else 30
 
-        # For the output video, we'll use the standard display size from _create_display
         output_width = 640 * 2
         output_height = 480
 
-        # Use XVID for intermediate format (more reliable than H264 in OpenCV)
         temp_filename = f"temp_comparison_{uuid.uuid4()}.avi"
         temp_path = os.path.join(os.path.dirname(output_path), temp_filename)
 
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Use XVID for better compatibility
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
         video_writer = cv2.VideoWriter(temp_path, fourcc, fps, (output_width, output_height))
 
         self.ref_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
@@ -393,14 +266,7 @@ class PoseComparison:
 
         scores = []
         frame_count = 0
-
-        # Initialize dance scoring calculator
-        dance_calculator = DanceScoringCalculator()
-
-        # Store detailed data for each frame
-        frame_details = []
-        pose_data_sequence = []
-        timestamps = []
+        frame_details = [] # Keep frame_details for excel export, but without detailed scores
 
         try:
             for i in range(total_frames):
@@ -416,51 +282,12 @@ class PoseComparison:
                 score, wrong_keypoints = self._calculate_score(user_keypoints, ref_keypoints)
                 scores.append(score)
                 frame_count += 1
-
-                # Calculate detailed dance scoring metrics for this frame
-                rhythm_score = 0.0
-                posture_score = 0.0
-                movement_score = 0.0
-                expression_score = 0.0
-
-                if user_keypoints is not None and ref_keypoints is not None:
-                    # Convert keypoints to numpy array if needed
-                    user_kp_array = np.array(user_keypoints).flatten() if user_keypoints is not None else None
-                    ref_kp_array = np.array(ref_keypoints).flatten() if ref_keypoints is not None else None
-
-                    # Calculate individual scores
-                    if user_kp_array is not None:
-                        posture_score = dance_calculator.calculate_posture_score(user_kp_array)
-                        expression_score = dance_calculator.calculate_expression_score(user_kp_array, user_results)
-
-                    if user_kp_array is not None and ref_kp_array is not None:
-                        movement_score = dance_calculator.calculate_movement_score(user_kp_array, ref_kp_array)
-
-                # Store frame data for rhythm calculation
-                current_time = i / fps if fps > 0 else i * 0.033  # Assume 30fps if unknown
-                frame_data = {
-                    'timestamp': current_time,
-                    'keypoints': user_keypoints.tolist() if user_keypoints is not None else [],
-                    'similarity_score': score
-                }
-                pose_data_sequence.append(frame_data)
-                timestamps.append(current_time)
-
-                # Calculate rhythm score (needs sequence data)
-                if len(pose_data_sequence) > 1:
-                    rhythm_score = dance_calculator.calculate_rhythm_score(pose_data_sequence, timestamps)
-
-                # Store detailed frame information
+                
+                current_time = i / fps if fps > 0 else i * 0.033
                 frame_details.append({
                     'frame': i + 1,
                     'timestamp': current_time,
                     'similarity_score': score,
-                    'rhythm_score': rhythm_score,
-                    'posture_score': posture_score,
-                    'movement_score': movement_score,
-                    'expression_score': expression_score,
-                    'wrong_keypoints_count': len(wrong_keypoints),
-                    'wrong_keypoints': list(wrong_keypoints)
                 })
 
                 display_frame, _ = self._create_display(
@@ -484,49 +311,28 @@ class PoseComparison:
             self.ref_cap.release()
             video_writer.release()
 
-            # Convert AVI to H264 MP4
             if os.path.exists(temp_path):
                 progress_queue.put({"type": "progress", "step": "converting", "message": "Converting to H264 format...", "percentage": 95})
-
                 if self._convert_to_h264(temp_path, output_path):
                     self.logger.info(f"✅ Video saved successfully with H264 encoding: {output_path}")
-                    progress_queue.put({"type": "progress", "step": "completed", "message": f"✅ Comparison video saved to {output_path}", "percentage": 100})
                 else:
                     self.logger.error(f"❌ Failed to convert video to H264, falling back to renaming AVI.")
-                    # Move temp file to output path if conversion fails
                     os.rename(temp_path, output_path)
-                    progress_queue.put({"type": "progress", "step": "completed", "message": f"⚠️ Video saved as AVI (H264 conversion failed): {output_path}", "percentage": 100})
             else:
-                progress_queue.put({"type": "progress", "step": "completed", "message": f"❌ Failed to save video", "percentage": 100})
+                 self.logger.error(f"❌ Temporary video file not found: {temp_path}")
 
-        # Calculate final dance scoring metrics
+
+        # Calculate final scores
         average_score = np.mean(scores) if scores else 0.0
-
-        # Calculate overall scores from frame details
-        if frame_details:
-            final_rhythm_score = sum(f['rhythm_score'] for f in frame_details) / len(frame_details)
-            final_posture_score = sum(f['posture_score'] for f in frame_details) / len(frame_details)
-            final_movement_score = sum(f['movement_score'] for f in frame_details) / len(frame_details)
-            final_expression_score = sum(f['expression_score'] for f in frame_details) / len(frame_details)
-
-            # Calculate total score (weighted average)
-            total_score = (average_score * 0.3 + final_rhythm_score * 0.2 +
-                          final_posture_score * 0.2 + final_movement_score * 0.2 + final_expression_score * 0.1)
-        else:
-            final_rhythm_score = final_posture_score = final_movement_score = final_expression_score = 0.0
-            total_score = average_score
+        
+        # Use the new centralized calculator
+        final_dance_metrics = DanceScoringCalculator.calculate_derived_scores(average_score)
 
         return {
             'average_similarity_score': average_score,
             'total_frames_processed': frame_count,
-            'frame_details': frame_details,
-            'dance_scoring_metrics': {
-                'rhythm_score': final_rhythm_score,
-                'posture_score': final_posture_score,
-                'movement_score': final_movement_score,
-                'expression_score': final_expression_score,
-                'total_score': total_score
-            }
+            'frame_details': frame_details, # This now only contains basic info
+            'dance_scoring_metrics': final_dance_metrics
         }, scores
 
     def annotate_video(self, raw_user_video_path: str, annotated_output_path: str):
@@ -539,7 +345,6 @@ class PoseComparison:
         if not user_cap.isOpened():
             raise ValueError(f"Could not open raw user video: {raw_user_video_path}")
 
-        # Get video properties
         ref_frame_count = int(self.ref_cap.get(cv2.CAP_PROP_FRAME_COUNT))
         user_frame_count = int(user_cap.get(cv2.CAP_PROP_FRAME_COUNT))
         total_frames = min(ref_frame_count, user_frame_count)
@@ -552,12 +357,10 @@ class PoseComparison:
         width = int(user_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(user_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        # Create VideoWriter for the annotated output
-        # Use XVID for intermediate format, then convert to H264
         temp_filename = f"temp_annotated_{uuid.uuid4()}.avi"
         temp_path = os.path.join(os.path.dirname(annotated_output_path), temp_filename)
 
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Use XVID for better compatibility
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
         video_writer = cv2.VideoWriter(temp_path, fourcc, fps, (width, height))
 
         self.ref_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
@@ -571,16 +374,13 @@ class PoseComparison:
                 if not ret_ref or not ret_user:
                     break
 
-                # Perform comparison to get data
                 user_keypoints, user_results = self._extract_keypoints(user_frame)
                 ref_keypoints, ref_results = self._extract_keypoints(ref_frame)
                 score, wrong_keypoints = self._calculate_score(user_keypoints, ref_keypoints)
                 scores.append(score)
 
-                # --- DEBUGGING ---
                 print(f"Frame {i}: Found {len(wrong_keypoints)} wrong keypoints: {wrong_keypoints}")
                 
-                # Draw the advanced visualization on the user frame
                 annotated_frame = self._draw_pose(
                     user_frame,
                     main_results=user_results,
@@ -588,25 +388,21 @@ class PoseComparison:
                     ghost_results=ref_results
                 )
                 
-                # Write the annotated frame
                 video_writer.write(annotated_frame)
         finally:
             user_cap.release()
             video_writer.release()
 
-            # Convert AVI to H264 MP4
             if os.path.exists(temp_path):
                 self.logger.info(f"🔄 Converting annotated video to H264 format...")
                 if self._convert_to_h264(temp_path, annotated_output_path):
                     self.logger.info(f"✅ Annotated video saved with H264 encoding: {annotated_output_path}")
                 else:
                     self.logger.error(f"❌ Failed to convert annotated video to H264, keeping AVI format")
-                    # Move temp file to output path if conversion fails
                     os.rename(temp_path, annotated_output_path)
             else:
                 self.logger.error(f"❌ Failed to save annotated video")
 
-        # Calculate average score
         average_score = np.mean(scores) if scores else 0.0
         self.logger.info(f"Average similarity score for annotation: {average_score:.2f}")
 
@@ -627,10 +423,10 @@ class PoseComparison:
         try:
             cmd = [
                 ffmpeg_path, "-i", input_path,
-                "-c:v", "libx264",  # Use H264 encoder
-                "-preset", "fast",  # Fast encoding preset
-                "-crf", "23",       # Quality (lower = better quality)
-                "-y",               # Overwrite output file
+                "-c:v", "libx264",
+                "-preset", "fast",
+                "-crf", "23",
+                "-y",
                 output_path
             ]
             
@@ -639,7 +435,6 @@ class PoseComparison:
             
             if result.returncode == 0:
                 self.logger.info(f"✅ Video conversion successful: {output_path}")
-                # Remove temporary file
                 if os.path.exists(input_path) and input_path != output_path:
                     os.remove(input_path)
                 return True
@@ -651,10 +446,9 @@ class PoseComparison:
             self.logger.error(f"❌ Error converting video: {str(e)}")
             return False
 
-    # 
     def run(self, camera_index=0):
         """Run side-by-side comparison"""
-        user_cap = cv2.VideoCapture(camera_index)#lấy cam realtime 
+        user_cap = cv2.VideoCapture(camera_index)
         user_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
         user_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
         
@@ -675,63 +469,46 @@ class PoseComparison:
         try:
             while True:
                 if not paused:
-                    # Read user frame
-                    #lấy khung hình từ camera
                     ret_user, user_frame = user_cap.read()
                     if not ret_user:
                         break
                     
-                    # Flip for mirror effect
                     user_frame = cv2.flip(user_frame, 1)
                     
-                    # Read reference frame
-                    #lấy khung hình từ video
                     ret_ref, ref_frame = self.ref_cap.read()
                     if not ret_ref:
-                        # Restart reference video
-                    
                         self.ref_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                         ret_ref, ref_frame = self.ref_cap.read()
                     
-                    # Extract poses
                     user_keypoints, user_results = self._extract_keypoints(user_frame)
                     
                     ref_keypoints, ref_results = None, None
                     if ret_ref:
                         ref_keypoints, ref_results = self._extract_keypoints(ref_frame)
                     
-                    # Calculate score and find wrong keypoints
                     score, wrong_keypoints = self._calculate_score(user_keypoints, ref_keypoints)
                 
-                # Create display (use current score even if paused)
                 display, user_display = self._create_display(
                     ref_frame if ret_ref else None, ref_results, 
                     user_frame, user_results, score, wrong_keypoints
                 )
                 
-                # Add recording indicator
                 if self.is_recording:
-                    cv2.circle(display, (10, 10), 10, (0, 0, 255), -1)  # Red dot
+                    cv2.circle(display, (10, 10), 10, (0, 0, 255), -1)
                 
-                # Write frame if recording (only user pose side)
                 if self.is_recording and not paused:
                     self._write_frame(user_display, score, wrong_keypoints)
                 
-                # Show display
                 cv2.imshow('Pose Comparison - Reference vs Your Pose', display)
                 
-                # Handle controls
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord('q'):
                     break
                 elif key == ord('r'):
-                    # Restart reference video
                     self.ref_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                     print("Reference video restarted")
                 elif key == ord('v'):
-                    # Toggle recording
                     if not self.is_recording:
-                        # Get dimensions from user display
                         height, width = user_display.shape[:2]
                         self._start_recording(width, height, fps=30.0)
                     else:
@@ -743,7 +520,6 @@ class PoseComparison:
         except KeyboardInterrupt:
             print("\nStopping...")
         finally:
-            # Stop recording if still active
             if self.is_recording:
                 self._stop_recording()
             user_cap.release()
@@ -764,53 +540,43 @@ class LiveComparisonSession:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         self.output_path = os.path.join(output_dir, f"live_session_{timestamp}.mp4")
 
-        # Assuming a standard webcam resolution for the output
-        # The actual frame size will be used when writing the first frame.
-        # Placeholder dimensions, will be updated.
         self.width = 640
         self.height = 480
-        fps = 20 # A reasonable default for webcam streams
+        fps = 20
 
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Use XVID for better compatibility
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
         self.video_writer = cv2.VideoWriter(self.output_path, fourcc, fps, (self.width, self.height))
         self.is_recording = True
         print(f"✅ Live session recording started: {self.output_path}")
 
     def process_frame(self, user_frame_bytes: bytes) -> dict:
         """Processes a single frame from the user, compares it, and returns the result."""
-        # Decode user frame
         nparr = np.frombuffer(user_frame_bytes, np.uint8)
         user_frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if user_frame is None:
             return {"error": "Invalid frame received."}
 
-        # Update recording dimensions if this is the first frame
         if self.video_writer is not None and (self.height, self.width) != user_frame.shape[:2]:
             self.height, self.width, _ = user_frame.shape
             fps = self.video_writer.get(cv2.CAP_PROP_FPS)
-            fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Use XVID for better compatibility
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')
             self.video_writer.release()
             self.video_writer = cv2.VideoWriter(self.output_path, fourcc, fps, (self.width, self.height))
 
-        # Read corresponding reference frame
         ret_ref, ref_frame = self.comparison.ref_cap.read()
         if not ret_ref:
-            # If reference video ends, loop it
             self.comparison.ref_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
             ret_ref, ref_frame = self.comparison.ref_cap.read()
             if not ret_ref:
                 return {"error": "Could not read reference video."}
 
-        # Perform comparison
         user_keypoints, user_results = self.comparison._extract_keypoints(user_frame)
         ref_keypoints, _ = self.comparison._extract_keypoints(ref_frame)
         score, wrong_keypoints = self.comparison._calculate_score(user_keypoints, ref_keypoints)
 
-        # Write plain user's frame to the recording for post-processing later
         if self.is_recording:
             self.video_writer.write(user_frame)
 
-        # Convert numpy arrays to lists for JSON serialization
         user_kps_list = user_keypoints.tolist() if user_keypoints is not None else []
         ref_kps_list = ref_keypoints.tolist() if ref_keypoints is not None else []
 
@@ -847,7 +613,6 @@ class LiveCameraSession:
         self.session_id = str(uuid.uuid4())
         self.output_path = os.path.join(output_dir, f"camera_session_{self.session_id}.mp4")
 
-        # MediaPipe setup
         self.logger.debug("🤖 Setting up MediaPipe pose detection...")
         self.mp_pose = mp.solutions.pose
         self.pose = self.mp_pose.Pose(
@@ -858,7 +623,6 @@ class LiveCameraSession:
         )
         self.logger.debug("✅ MediaPipe pose detection initialized")
 
-        # Session data
         self.frames = []
         self.pose_data = []
         self.timestamps = []
@@ -884,7 +648,6 @@ class LiveCameraSession:
             return {"error": "Session not active"}
 
         try:
-            # Convert bytes to numpy array
             self.logger.debug(f"🔄 Converting {len(frame_bytes)} bytes to frame...")
             nparr = np.frombuffer(frame_bytes, np.uint8)
             frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -893,11 +656,9 @@ class LiveCameraSession:
                 self.logger.error("❌ Failed to decode frame from bytes")
                 return {"error": "Invalid frame data"}
 
-            # Get current timestamp
             current_time = time.time() - self.start_time
             self.logger.debug(f"⏱️ Frame timestamp: {current_time:.2f}s")
 
-            # Process pose detection
             self.logger.debug("🤖 Processing pose detection...")
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             results = self.pose.process(frame_rgb)
@@ -908,13 +669,11 @@ class LiveCameraSession:
                 "pose_detected": results.pose_landmarks is not None
             }
 
-            # Store frame and pose data
             self.frames.append(frame)
             self.timestamps.append(current_time)
             self.logger.debug(f"💾 Stored frame - Total frames: {len(self.frames)}")
 
             if results.pose_landmarks:
-                # Extract keypoints
                 keypoints = []
                 for landmark in results.pose_landmarks.landmark:
                     keypoints.extend([landmark.x, landmark.y, landmark.z])
@@ -943,7 +702,7 @@ class LiveCameraSession:
         except Exception as e:
             self.logger.error(f"❌ Error processing frame: {str(e)}")
             self.logger.debug(f"📋 Frame processing error traceback: {traceback.format_exc()}")
-            return {"error": str(e)}
+            return {"error": "str(e)"}
 
     def start_session(self):
         """Start the camera session"""
@@ -981,18 +740,15 @@ class LiveCameraSession:
 
         self.logger.info(f"💾 Saving session video - {len(self.frames)} frames to {self.output_path}")
         try:
-            # Get frame dimensions
             height, width = self.frames[0].shape[:2]
             self.logger.debug(f"📹 Video dimensions: {width}x{height}")
 
-            # Create video writer
-            fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Use XVID for better compatibility
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')
             out = cv2.VideoWriter(self.output_path, fourcc, 20.0, (width, height))
 
-            # Write frames
             for i, frame in enumerate(self.frames):
                 out.write(frame)
-                if i % 100 == 0:  # Log progress every 100 frames
+                if i % 100 == 0:
                     self.logger.debug(f"📹 Written {i}/{len(self.frames)} frames")
 
             out.release()
@@ -1018,20 +774,17 @@ class LiveCameraSession:
                 self.logger.error("❌ No frames recorded in session for analysis")
                 return {"error": "No frames recorded in session"}
 
-            # Save session video first
             self.logger.info("💾 Saving session video before analysis...")
             session_video_path = self.save_session_video()
             if not session_video_path:
                 self.logger.error("❌ Failed to save session video for analysis")
                 return {"error": "Failed to save session video"}
 
-            # Use existing PoseComparison for analysis
             self.logger.info("🤖 Initializing PoseComparison for analysis...")
             comparison = PoseComparison(ref_path)
             annotated_video_path = session_video_path.replace("camera_session_", "analyzed_session_")
             self.logger.info(f"🎨 Creating annotated video: {annotated_video_path}")
 
-            # Create annotated video
             comparison.annotate_video(session_video_path, annotated_video_path)
             self.logger.info("✅ Session analysis completed successfully")
 
@@ -1050,7 +803,7 @@ class LiveCameraSession:
         except Exception as e:
             self.logger.error(f"❌ Error analyzing session: {str(e)}")
             self.logger.debug(f"📋 Analysis error traceback: {traceback.format_exc()}")
-            return {"error": str(e)}
+            return {"error": "str(e)"}
 
     def _convert_to_h264(self, input_path: str, output_path: str) -> bool:
         """
@@ -1060,10 +813,10 @@ class LiveCameraSession:
         try:
             cmd = [
                 "ffmpeg", "-i", input_path,
-                "-c:v", "libx264",  # Use H264 encoder
-                "-preset", "fast",  # Fast encoding preset
-                "-crf", "23",       # Quality (lower = better quality)
-                "-y",               # Overwrite output file
+                "-c:v", "libx264",
+                "-preset", "fast",
+                "-crf", "23",
+                "-y",
                 output_path
             ]
             
@@ -1072,7 +825,6 @@ class LiveCameraSession:
             
             if result.returncode == 0:
                 self.logger.info(f"✅ Video conversion successful: {output_path}")
-                # Remove temporary file
                 if os.path.exists(input_path) and input_path != output_path:
                     os.remove(input_path)
                 return True

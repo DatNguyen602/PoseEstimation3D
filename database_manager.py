@@ -20,7 +20,8 @@ class DatabaseManager:
             'password': os.getenv('DB_PASSWORD', '123456public'),
             'charset': 'utf8mb4',
             'use_pure': True,
-            'autocommit': False
+            'autocommit': False,
+            'connection_timeout': 10
         }
 
         # Không cần connection_params bổ sung cho phiên bản này
@@ -58,6 +59,7 @@ class DatabaseManager:
 
     def create_table_if_not_exists(self):
         """Tạo bảng video3d nếu chưa tồn tại"""
+        logger.info("--- Entering create_table_if_not_exists ---")
         create_table_sql = """
         CREATE TABLE IF NOT EXISTS video3d (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -85,10 +87,15 @@ class DatabaseManager:
         """
 
         try:
+            logger.info("--- Attempting to get connection for CREATE TABLE ---")
             with self.get_connection() as conn:
+                logger.info("--- Connection for CREATE TABLE acquired ---")
                 cursor = conn.cursor()
+                logger.info("--- Executing CREATE TABLE statement ---")
                 cursor.execute(create_table_sql)
+                logger.info("--- CREATE TABLE statement executed ---")
                 conn.commit()
+                logger.info("--- COMMIT executed ---")
                 logger.info("✅ Table 'video3d' is ready!")
         except mysql.connector.Error as e:
             logger.error(f"❌ Error creating table: {e}")

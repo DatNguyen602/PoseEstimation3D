@@ -342,7 +342,6 @@ class Pose3DEstimator:
                     filtered_poses.append(filtered_poses[-1])  # Repeat last valid pose
                 else:
                     filtered_poses.append(pose)  # Keep original if no previous valid pose
-                filtered_poses.append(pose)
         
         filtered_count = len(filtered_poses)
         print(f"   Kept {filtered_count}/{original_count} frames after filtering")

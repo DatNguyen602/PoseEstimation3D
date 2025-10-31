@@ -16,15 +16,32 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 
+print("Importing pose_comparison...")
 from pose_comparison import PoseComparison, LiveComparisonSession, LiveCameraSession
+print("Imported pose_comparison.")
+
 # Import database manager
+print("Importing database_manager...")
 from database_manager import db_manager
+print("Imported database_manager.")
+
 # Import pipeline runner
+print("Importing run_pipeline...")
 from run_pipeline import run_full_pipeline
+print("Imported run_pipeline.")
+
 # Import Cloudinary helper
+print("Importing cloudinary_helper...")
 from cloudinary_helper import upload_comparison_video
+print("Imported cloudinary_helper.")
+
 # Import Google Sheets helper
+print("Importing google_sheets_helper...")
 from google_sheets_helper import GoogleSheetsHelper
+print("Imported google_sheets_helper.")
+
+# Import derived score calculator
+from dance_scoring_calculator import DanceScoringCalculator
 
 # Setup logging
 logging.basicConfig(
@@ -51,36 +68,33 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Initialize database table on startup
-try:
-    if db_manager.test_connection():
-        db_manager.create_table_if_not_exists()
-        logger.info("✅ Database initialized successfully!")
-    else:
-        logger.error("❌ Failed to connect to database")
-except Exception as e:
-    logger.error(f"❌ Database initialization failed: {e}")
-
-# Initialize Google Sheets helper
 sheets_helper = None
-try:
-    sheets_helper = GoogleSheetsHelper()
-    logger.info("✅ Google Sheets helper initialized successfully!")
 
-    # Kiểm tra quyền truy cập spreadsheet nếu đã cấu hình
-    if sheets_helper.spreadsheet_id and sheets_helper.spreadsheet_id != 'your_spreadsheet_id_here':
-        access_ok = sheets_helper.check_spreadsheet_access()
-        if not access_ok:
-            logger.warning("⚠️ Không thể truy cập Google Sheets được cấu hình")
-            logger.info("ℹ️ Hãy kiểm tra quyền chia sẻ spreadsheet với Service Account")
+@app.on_event("startup")
+def startup_event():
+    """
+    Initializes helpers on application startup.
+    """
+    global sheets_helper
+    logger.info("--- Running startup_event for Google Sheets initialization ---")
+    try:
+        sheets_helper = GoogleSheetsHelper()
+        logger.info("✅ Google Sheets helper initialized successfully!")
+
+        # Kiểm tra quyền truy cập spreadsheet nếu đã cấu hình
+        if sheets_helper.spreadsheet_id and sheets_helper.spreadsheet_id != 'your_spreadsheet_id_here':
+            access_ok = sheets_helper.check_spreadsheet_access()
+            if not access_ok:
+                logger.warning("⚠️ Không thể truy cập Google Sheets được cấu hình")
+                logger.info("ℹ️ Hãy kiểm tra quyền chia sẻ spreadsheet với Service Account")
+            else:
+                logger.info("✅ Đã xác nhận quyền truy cập Google Sheets")
         else:
-            logger.info("✅ Đã xác nhận quyền truy cập Google Sheets")
-    else:
-        logger.info("ℹ️ Google Sheets ID chưa được cấu hình - sẽ tạo spreadsheet mới khi cần")
+            logger.info("ℹ️ Google Sheets ID chưa được cấu hình - sẽ tạo spreadsheet mới khi cần")
 
-except Exception as e:
-    logger.warning(f"⚠️ Google Sheets helper initialization failed: {e}")
-    logger.info("ℹ️ Google Sheets integration will be disabled")
+    except Exception as e:
+        logger.warning(f"⚠️ Google Sheets helper initialization failed: {e}")
+        logger.info("ℹ️ Google Sheets integration will be disabled. No data will be written to sheets.")
 
 # --- CORS Configuration ---
 origins = [
@@ -194,17 +208,22 @@ async def list_reference_videos():
 
 def run_pipeline_in_thread(video_path, output_dir, output_basename, result_queue):
     """Runs the 3D pose estimation pipeline in a separate thread."""
+    logger.info(f"🚀 Pipeline thread started for video: {video_path} -> {output_basename}")
     try:
         original_stdout = sys.stdout
         sys.stdout = QueueIO(result_queue)
+        logger.info(f"▶️ Running full pipeline for video: {video_path}")
         result = run_full_pipeline(video_path, output_dir, output_basename)
+        logger.info(f"✅ Pipeline completed successfully for video: {video_path}")
         result_queue.put({"type": "result", "data": result})
     except Exception as e:
         error_str = traceback.format_exc()
+        logger.error(f"❌ Pipeline error for video {video_path}: {e}")
         result_queue.put({"type": "error", "data": error_str})
     finally:
         sys.stdout = original_stdout
         result_queue.put({"type": "done"})
+        logger.info(f"🏁 Pipeline thread finished for video: {video_path}")
 
 @app.post("/process-video-stream/", 
           summary="Upload video for 3D pose estimation (SSE)",
@@ -215,6 +234,15 @@ async def process_video_stream(
     title: str = Form(None)
 ):
     video_path, request_id = await save_upload_file(file)
+    logger.info(
+        "📥 Received process_video_stream request",
+        extra={
+            "request_id": request_id,
+            "user_id": user_id,
+            "title": title,
+            "video_path": video_path
+        }
+    )
     
     async def event_generator():
         result_queue = queue.Queue()
@@ -224,11 +252,14 @@ async def process_video_stream(
             args=(video_path, OUTPUTS_DIR, request_id, result_queue)
         )
         pipeline_thread.start()
+        logger.info(f"🧵 Pipeline thread started (request_id={request_id})")
         try:
+            logger.info(f"📡 SSE event generator running (request_id={request_id})")
             while True:
                 try:
                     message = result_queue.get_nowait()
                     if isinstance(message, dict):
+                        logger.info(f"📨 Received pipeline message: {message.get('type')} (request_id={request_id})")
                         if message["type"] == "done":
                             yield {"event": "done", "data": "Processing finished."}
                             break
@@ -237,11 +268,9 @@ async def process_video_stream(
                             final_json_path, generated_files = message["data"]
                             files_to_cleanup.extend(generated_files)
                             
-                            # Read result data
                             with open(final_json_path, 'r') as f:
                                 result_data = json.load(f)
                             
-                            # Add metadata
                             result_data['input_video_url'] = file.filename
                             result_data['result_url'] = f"/res/output/{os.path.basename(final_json_path)}"
                             if user_id:
@@ -249,175 +278,91 @@ async def process_video_stream(
                             if title:
                                 result_data['title'] = title
                             
-                            # Save to database
-                            logger.info(f"💾 Bắt đầu lưu kết quả vào database cho user: {user_id}")
-                            record_id = db_manager.save_video_result(
-                                result_data,
-                                'process_video_stream',
-                                user_id
-                            )
-                            
-                            # Add database ID
-                            result_data['database_record_id'] = record_id
-                            logger.info(f"✅ Thành công! Đã lưu vào database với ID: {record_id}")
+                            try:
+                                logger.info(f"💾 Saving result to database for user: {user_id}")
+                                record_id = db_manager.save_video_result(
+                                    result_data,
+                                    'process_video_stream',
+                                    user_id
+                                )
+                                result_data['database_record_id'] = record_id
+                                logger.info(f"✅ Successfully saved to database with ID: {record_id}")
+                            except Exception as db_error:
+                                logger.error(f"❌ Failed to save result to database: {str(db_error)}")
+                                logger.error(f"🔍 DB Error Details: {traceback.format_exc()}")
+                                result_data['database_error'] = str(db_error)
+
                             yield {"event": "result", "data": json.dumps(result_data)}
                             
                         elif message["type"] == "error":
-                            # Save error to database
-                            logger.info(f"💾 Bắt đầu lưu lỗi vào database cho user: {user_id}")
-                            error_data = {
-                                'error': message['data'],
-                                'input_video_url': file.filename,
-                                'title': title or 'Video Processing Failed'
-                            }
+                            try:
+                                logger.info(f"💾 Saving error to database for user: {user_id}")
+                                error_data = {
+                                    'error': message['data'],
+                                    'input_video_url': file.filename,
+                                    'title': title or 'Video Processing Failed'
+                                }
+                                if user_id:
+                                    error_data['user_id'] = user_id
+                                
+                                db_manager.save_video_result(
+                                    error_data,
+                                    'process_video_stream',
+                                    user_id
+                                )
+                                logger.info(f"✅ Successfully saved error to database")
+                            except Exception as db_error:
+                                logger.error(f"❌ Failed to save error to database: {str(db_error)}")
+                                logger.error(f"🔍 DB Error Details: {traceback.format_exc()}")
                             
-                            if user_id:
-                                error_data['user_id'] = user_id
-                            
-                            logger.info(f"📤 Gửi dữ liệu lỗi đến database manager...")
-                            db_manager.save_video_result(
-                                error_data,
-                                'process_video_stream',
-                                user_id
-                            )
-                            logger.info(f"✅ Thành công! Đã lưu lỗi vào database")
                             yield {"event": "error", "data": message["data"]}
                             break
                     else:
+                        logger.debug(f"📝 Log stream message: {message.strip()} (request_id={request_id})")
                         yield {"event": "log", "data": message}
                 except queue.Empty:
                     if not pipeline_thread.is_alive():
+                        logger.info(f"📭 Queue empty and pipeline thread finished (request_id={request_id})")
                         break
                     await asyncio.sleep(0.1)
         finally:
             pipeline_thread.join()
+            logger.info(f"🧼 Cleaning up files for request_id={request_id}: {files_to_cleanup}")
             cleanup_files(files_to_cleanup)
     return EventSourceResponse(event_generator())
 
 def run_video_comparison_in_thread(user_video_path, reference_video_path, output_path, result_queue):
     """
     Runs the video comparison process in a thread.
-    Creates side-by-side comparison video between user and reference videos.
+    Creates side-by-side comparison video and gets synchronized scores.
     """
     try:
         logger.info(f"🔄 Starting video comparison process...")
-        logger.info(f"   📹 User video: {user_video_path}")
-        logger.info(f"   🎬 Reference video: {reference_video_path}")
-        logger.info(f"   💾 Output: {output_path}")
-
-        result_queue.put({"type": "progress", "step": "initializing", "message": "Initializing pose comparison...", "percentage": 0})
-
-        logger.info(f"🤖 Initializing PoseComparison...")
         comparison = PoseComparison(reference_video_path)
-        result_queue.put({"type": "progress", "step": "loading_videos", "message": "Loading video files...", "percentage": 10})
-
+        
         logger.info(f"⚙️ Processing video files and creating side-by-side comparison...")
         result_dict, frame_scores = comparison.process_video_files(user_video_path, output_path, result_queue)
 
         logger.info(f"✅ Video comparison completed successfully!")
-        logger.info(f"   📊 Side-by-side video saved to: {output_path}")
-        average_score = result_dict['average_similarity_score']
-        logger.info(f"   💯 Average similarity score: {average_score:.2f}%")
-
-        # 📊 DETAILED DANCE SCORING METRICS
-        logger.info("🎯 === DANCE SCORING PERFORMANCE METRICS ===")
-        dance_metrics = result_dict.get('dance_scoring_metrics', {})
-
-        logger.info(f"   🎵 Rhythm Score: {dance_metrics.get('rhythm_score', 0):.2f}%")
-        logger.info(f"   🏃 Posture Score: {dance_metrics.get('posture_score', 0):.2f}%")
-        logger.info(f"   💃 Movement Score: {dance_metrics.get('movement_score', 0):.2f}%")
-        logger.info(f"   😊 Expression Score: {dance_metrics.get('expression_score', 0):.2f}%")
-        logger.info(f"   ⭐ Total Dance Score: {dance_metrics.get('total_score', 0):.2f}%")
         
-        baseline_result = None
-        sensitivity_result = None
-        
-        try:
-            # Import dance scoring system
-            from dance_scoring import dance_scorer
-            
-            # Calculate baseline score (reference video vs itself)
-            logger.info("🔄 Calculating baseline score (reference vs itself)...")
-            baseline_result = dance_scorer.calculate_baseline_score(reference_video_path)
-            
-            if 'error' not in baseline_result:
-                logger.info(f"📊 BASELINE SCORE: {baseline_result['baseline_score_percent']}%")
-                logger.info(f"   ⏱️ Processing time: {baseline_result['processing_time']:.3f}s")
-                logger.info(f"   🎬 Frames processed: {baseline_result['frames_processed']}")
-                
-                result_queue.put({
-                    "type": "progress", 
-                    "step": "baseline_scoring", 
-                    "message": f"Baseline Score: {baseline_result['baseline_score_percent']}%", 
-                    "percentage": 85,
-                    "baseline_score": baseline_result['baseline_score_percent']
-                })
-            else:
-                logger.error(f"❌ Baseline scoring error: {baseline_result['error']}")
-                
-            # Calculate sensitivity score (using same video for demo)
-            logger.info("🔄 Calculating algorithm sensitivity score...")
-            sensitivity_result = dance_scorer.calculate_sensitivity_score(
-                reference_video_path, 
-                reference_video_path  # Using same video for demo
-            )
-            
-            if 'error' not in sensitivity_result:
-                logger.info(f"🎯 ALGORITHM SENSITIVITY: {sensitivity_result['sensitivity_score_percent']}%")
-                logger.info(f"   ⏱️ Processing time: {sensitivity_result['processing_time']:.3f}s")
-                logger.info(f"   🎬 Frames processed: {sensitivity_result['frames_processed']}")
-                
-                if sensitivity_result['sensitivity_score_percent'] > 95:
-                    logger.info("⚠️ WARNING: Algorithm may be too lenient (high sensitivity score)")
-                elif sensitivity_result['sensitivity_score_percent'] < 80:
-                    logger.info("✅ GOOD: Algorithm is properly detecting differences")
-                
-                result_queue.put({
-                    "type": "progress", 
-                    "step": "sensitivity_scoring", 
-                    "message": f"Sensitivity Score: {sensitivity_result['sensitivity_score_percent']}%", 
-                    "percentage": 95,
-                    "sensitivity_score": sensitivity_result['sensitivity_score_percent']
-                })
-            else:
-                logger.error(f"❌ Sensitivity scoring error: {sensitivity_result['error']}")
-                
-            logger.info("🎉 === DANCE SCORING METRICS COMPLETED ===")
-            
-        except ImportError as e:
-            logger.warning(f"⚠️ Dance scoring not available: {e}")
-        except Exception as e:
-            logger.error(f"❌ Error in dance scoring: {e}")
-            
         # Generate proper video URL for frontend
         video_filename = os.path.basename(output_path)
         video_url = f"/res/output/{video_filename}"
 
+        # Construct the final result data object - scores are now already synchronized
         result_data = {
             "cloudinary_video_url": video_url,
             "result_url": video_url,
             "side_by_side_video_url": video_url,
-            "average_similarity_score": average_score,
+            "average_similarity_score": result_dict.get('average_similarity_score', 0),
             "message": "Video comparison completed successfully",
-            "total_frames_processed": result_dict.get('total_frames_processed', len(frame_scores)),
+            "total_frames_processed": result_dict.get('total_frames_processed', 0),
             "score_range": {
                 "min": min(frame_scores) if frame_scores else 0,
                 "max": max(frame_scores) if frame_scores else 0,
-                "average": average_score
+                "average": result_dict.get('average_similarity_score', 0)
             },
-            # Thêm các chỉ số đánh giá khiêu vũ mới
-            "dance_scoring_metrics": {
-                "rhythm_score": dance_metrics.get('rhythm_score', 0),
-                "posture_score": dance_metrics.get('posture_score', 0),
-                "movement_score": dance_metrics.get('movement_score', 0),
-                "expression_score": dance_metrics.get('expression_score', 0),
-                "total_score": dance_metrics.get('total_score', 0),
-                "baseline_score_percent": baseline_result.get('baseline_score_percent', 0) if baseline_result else 0,
-                "sensitivity_score_percent": sensitivity_result.get('sensitivity_score_percent', 0) if sensitivity_result else 0,
-                "baseline_processing_time": baseline_result.get('processing_time', 0) if baseline_result else 0,
-                "sensitivity_processing_time": sensitivity_result.get('processing_time', 0) if sensitivity_result else 0
-            },
-            # Chi tiết từng frame để xuất Excel
+            "dance_scoring_metrics": result_dict.get('dance_scoring_metrics', {}),
             "frame_details": result_dict.get('frame_details', [])
         }
         
@@ -599,7 +544,7 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
     ref_video_path, _ = await save_upload_file(reference_video)
     
     output_filename = f"comparison_{user_request_id}.mp4"
-    output_path = os.path.join(OUTPUTS_DIR, output_filename)
+    output_path = os.path.join(OUTPUTS_DIR, output_filename) 
 
     user_video_basename = os.path.basename(user_video_path)
     annotated_filename = f"annotated_{user_video_basename}"
@@ -653,34 +598,29 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
                             # Save to database if requested
                             if save_to_db:
                                 try:
-                                    logger.info(f"💾 Bắt đầu lưu kết quả vào database cho user: {user_id}")
-                                    # Add metadata for database
+                                    logger.info(f"💾 Saving result to database for user: {user_id}")
                                     result_data['input_video_url'] = user_video.filename
                                     if user_id:
                                         result_data['user_id'] = user_id
                                     if title:
                                         result_data['title'] = title
                                     
-                                    # Use cloudinary_video_url as result_url for database storage
                                     if 'cloudinary_video_url' in result_data:
                                         result_data['result_url'] = result_data['cloudinary_video_url']
                                     
-                                    # Save to database
-                                    logger.info(f"📤 Gửi dữ liệu đến database manager...")
                                     record_id = db_manager.save_video_result(
                                         result_data, 
                                         'compare_videos',
                                         user_id
                                     )
                                     
-                                    # Add database ID to result
                                     result_data['database_record_id'] = record_id
-                                    logger.info(f"✅ Thành công! Đã lưu vào database với ID: {record_id}")
+                                    logger.info(f"✅ Successfully saved to database with ID: {record_id}")
                                     
                                 except Exception as db_error:
-                                    logger.error(f"❌ Thất bại khi lưu vào database: {str(db_error)}")
-                                    logger.error(f"🔍 Chi tiết lỗi: {traceback.format_exc()}")
-                                    # Continue processing even if database save fails
+                                    logger.error(f"❌ Failed to save result to database: {str(db_error)}")
+                                    logger.error(f"🔍 DB Error Details: {traceback.format_exc()}")
+                                    result_data['database_error'] = str(db_error)
                             
                             # Tạo file Excel với kết quả đánh giá chi tiết
                             try:
@@ -707,7 +647,8 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
 
                                     # Ghi vào sheet "Mô phỏng" với 5 trường đặc biệt và logic random
                                     try:
-                                        sheets_helper.write_mophong_data(result_data, 'Mophong')
+                                        mophong_scores = sheets_helper.write_mophong_data(result_data, 'Mophong')
+                                        result_data['mophong_scores'] = mophong_scores
                                         logger.info(f"✅ Đã ghi thành công vào sheet 'Mophong' với dữ liệu mô phỏng!")
                                     except Exception as custom_error:
                                         logger.error(f"❌ Lỗi ghi vào sheet 'Mophong': {str(custom_error)}")
@@ -733,31 +674,29 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
                                 "google_sheets_status": "success" if sheets_helper else "disabled"
                             })}
                         elif message["type"] == "error":
-                            error_data = message["data"]
+                            error_data_msg = message["data"]
                             
                             # Save error to database if requested
                             if save_to_db:
                                 try:
-                                    logger.info(f"💾 Bắt đầu lưu lỗi vào database cho user: {user_id}")
+                                    logger.info(f"💾 Saving error to database for user: {user_id}")
                                     db_error_data = {
-                                        'error': error_data,
+                                        'error': error_data_msg,
                                         'input_video_url': user_video.filename,
                                         'title': title or 'Video Comparison Failed',
                                         'user_id': user_id
                                     }
                                     
-                                    logger.info(f"📤 Gửi dữ liệu lỗi đến database manager...")
                                     db_manager.save_video_result(
                                         db_error_data,
                                         'compare_videos',
                                         user_id
                                     )
-                                    logger.info(f"✅ Thành công! Đã lưu lỗi vào database")
+                                    logger.info(f"✅ Successfully saved error to database")
                                     
                                 except Exception as db_error:
-                                    logger.error(f"❌ Thất bại khi lưu lỗi vào database: {str(db_error)}")
-                                    logger.error(f"🔍 Chi tiết lỗi: {traceback.format_exc()}")
-                                    # Continue processing even if database save fails
+                                    logger.error(f"❌ Failed to save error to database: {str(db_error)}")
+                                    logger.error(f"🔍 DB Error Details: {traceback.format_exc()}")
                             
                             # Ghi lỗi vào Google Sheets nếu có thể
                             if sheets_helper:
@@ -766,7 +705,7 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
                                     if sheets_helper.ensure_spreadsheet_access():
                                         # Ghi lỗi vào sheet tổng quan
                                         error_result = {
-                                            'error': error_data,
+                                            'error': error_data_msg,
                                             'input_video_url': user_video.filename,
                                             'user_id': user_id,
                                             'title': title or 'Video Comparison Failed',
@@ -781,7 +720,7 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
                                             error_data_custom = {
                                                 'timestamp': datetime.now().isoformat(),
                                                 'status': 'error',
-                                                'error_message': error_data
+                                                'error_message': error_data_msg
                                             }
                                             sheets_helper.write_custom_sheet(error_data_custom, 'Mophong', error_columns)
                                             logger.info(f"✅ Đã ghi lỗi vào sheet 'Mophong'")
@@ -790,7 +729,7 @@ async def compare_videos(user_video: UploadFile = File(...), reference_video: Up
                                 except Exception as sheets_error:
                                     logger.error(f"❌ Lỗi ghi lỗi vào Google Sheets: {str(sheets_error)}")
                             
-                            yield {"event": "error", "data": error_data}
+                            yield {"event": "error", "data": error_data_msg}
                             break
                         elif message["type"] == "progress":
                             # Send detailed progress updates
@@ -1402,6 +1341,8 @@ async def get_video_stream_results(
 
 
 if __name__ == "__main__":
+    host = os.getenv("API_HOST", "0.0.0.0")
+    port = int(os.getenv("API_PORT", "8000"))
     logger.info("🚀 Starting FastAPI server v2.0...")
-    logger.info("Access http://127.0.0.1:8000/docs for the interactive API documentation.")
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    logger.info(f"Access http://{host}:{port}/docs for the interactive API documentation.")
+    uvicorn.run(app, host=host, port=port)
