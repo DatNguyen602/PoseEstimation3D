@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pose Comparison V2.0</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; background: #f4f5f7; color: #172b4d; margin: 0; }
+        header { width: 100%; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 15px 0; margin-bottom: 20px; }
+        h1 { text-align: center; color: #0052cc; margin: 0; }
+        #main-container { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; max-width: 1320px; }
+        #main-canvas { border: 1px solid #dfe1e6; border-radius: 8px; background: #000; }
+        #controls { display: flex; align-items: center; gap: 15px; padding: 15px; background: #fff; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        #status-bar { width: 100%; max-width: 1280px; box-sizing: border-box; display: flex; justify-content: space-around; align-items: center; padding: 10px 20px; background: #fff; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        label { font-weight: 600; }
+        select, button { font-size: 1em; padding: 10px 15px; border-radius: 5px; border: 1px solid #ccc; }
+        button { cursor: pointer; border: none; background: #0052cc; color: white; font-weight: 600; transition: background 0.2s; }
+        button:hover { background: #0065ff; }
+        button:disabled { background: #a5adba; cursor: not-allowed; }
+        #statusText, #score-display { font-size: 1.2em; font-weight: 600; }
+        .error { color: #de350b; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Pose Comparison V2.0</h1>
+    </header>
+
+    <div id="main-container">
+        <canvas id="main-canvas" width="1280" height="480"></canvas>
+
+        <div id="controls">
+            <label for="video-select">Choose a Reference Video:</label>
+            <select id="video-select" name="videos">
+                <option>Loading videos...</option>
+            </select>
+            <button id="startButton">Start Live Session</button>
+        </div>
+
+        <div id="status-bar">
+            <div>Status: <span id="statusText">Idle</span></div>
+            <div id="score-display">Score: N/A</div>
+        </div>
+    </div>
+
+    <!-- Hidden elements for processing -->
+    <div style="display:none;">
+        <video id="referenceVideo" controls muted playsinline></video>
+        <video id="userVideo" autoplay muted playsinline></video>
+        <canvas id="sending-canvas" width="640" height="480"></canvas>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const startButton = document.getElementById('startButton');
+        const userVideo = document.getElementById('userVideo');
+        const referenceVideo = document.getElementById('referenceVideo');
+        const videoSelect = document.getElementById('video-select');
+        const mainCanvas = document.getElementById('main-canvas');
+        const mainCtx = mainCanvas.getContext('2d');
+        const sendingCanvas = document.getElementById('sending-canvas');
+        const sendingCtx = sendingCanvas.getContext('2d');
+        const statusText = document.getElementById('statusText');
+        const scoreDisplay = document.getElementById('score-display');
+
+        // --- State ---
+        let websocket;
+        let frameSendInterval;
+        let latestComparisonData = {};
+        const FPS = 20; // Send 20 frames per second to backend
+        const API_BASE_URL = "http://127.0.0.1:8000";
+
+        // --- MediaPipe Constants ---
+        const POSE_CONNECTIONS = [
+            [0, 1], [1, 2], [2, 3], [3, 7], [0, 4], [4, 5], [5, 6], [6, 8], [9, 10],
+            [11, 12], [11, 13], [13, 15], [15, 17], [15, 19], [15, 21], [12, 14],
+            [14, 16], [16, 18], [16, 20], [16, 22], [11, 23], [12, 24], [23, 24],
+            [23, 25], [24, 26], [25, 27], [26, 28], [27, 29], [28, 30], [29, 31],
+            [30, 32], [27, 31], [28, 32]
+        ];
+
+        // --- Initialization ---
+        window.onload = loadReferenceVideos;
+        startButton.onclick = toggleSession;
+
+        async function loadReferenceVideos() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/reference_videos/`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const videos = await response.json();
+                
+                videoSelect.innerHTML = ''; // Clear loading message
+                if (videos.length === 0) {
+                    videoSelect.innerHTML = '<option>No videos found. Please upload one.</option>';
+                    startButton.disabled = true;
+                } else {
+                    videos.forEach(video => {
+                        const option = document.createElement('option');
+                        option.value = video.video_id;
+                        option.textContent = video.video_id;
+                        videoSelect.appendChild(option);
+                    });
+                    startButton.disabled = false;
+                }
+            } catch (e) {
+                handleError("Could not load reference videos. Is the server running?", e);
+                videoSelect.innerHTML = '<option>Error loading</option>';
+                startButton.disabled = true;
+            }
+        }
+
+        // --- Main Functions ---
+        async function toggleSession() {
+            if (websocket) {
+                stopSession();
+            } else {
+                await startSession();
+            }
+        }
+
+        async function startSession() {
+            const selectedVideoId = videoSelect.value;
+            if (!selectedVideoId || videoSelect.firstChild.textContent.includes('No videos')) {
+                handleError("Please select a valid reference video.");
+                return;
+            }
+
+            startButton.disabled = true;
+            startButton.textContent = "Stop Session";
+            statusText.textContent = "Requesting camera...";
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
+                userVideo.srcObject = stream;
+                await userVideo.play();
+
+                referenceVideo.src = `${API_BASE_URL}/reference_videos/${selectedVideoId}`;
+                
+                statusText.textContent = "Connecting...";
+                const wsUrl = `${API_BASE_URL.replace('http', 'ws')}/ws/compare_live/${selectedVideoId}`;
+                websocket = new WebSocket(wsUrl);
+                setupWebSocketListeners();
+
+            } catch (err) {
+                handleError("Could not access camera.", err);
+            }
+        }
+
+        function setupWebSocketListeners() {
+            websocket.onopen = () => {
+                statusText.textContent = "Connection open. Starting session...";
+                referenceVideo.currentTime = 0;
+                referenceVideo.play();
+            };
+
+            websocket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                switch (data.type) {
+                    case "session_started":
+                        statusText.textContent = "Session active! Let's dance!";
+                        frameSendInterval = setInterval(sendFrame, 1000 / FPS);
+                        requestAnimationFrame(renderLoop);
+                        break;
+                    case "comparison_result":
+                        latestComparisonData = data;
+                        break;
+                    case "error":
+                        handleError(`Server error: ${data.message}`);
+                        break;
+                }
+            };
+
+            websocket.onclose = () => {
+                statusText.textContent = "Session ended.";
+                stopSession(false); // Don't try to close the websocket again
+            };
+
+            websocket.onerror = (error) => handleError("Connection error.", error);
+        }
+
+        function sendFrame() {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                sendingCtx.drawImage(userVideo, 0, 0, sendingCanvas.width, sendingCanvas.height);
+                sendingCanvas.toBlob((blob) => { 
+                    if(blob) websocket.send(blob); 
+                }, 'image/jpeg');
+            }
+        }
+
+        function renderLoop() {
+            if (!websocket) return; // Stop rendering if session is over
+
+            mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+
+            // Draw reference video (left side) - clean, no skeleton
+            mainCtx.drawImage(referenceVideo, 0, 0, mainCanvas.width / 2, mainCanvas.height);
+
+            // Draw user video (right side)
+            mainCtx.drawImage(userVideo, mainCanvas.width / 2, 0, mainCanvas.width / 2, mainCanvas.height);
+            
+            // Draw the advanced skeleton on top of the user video
+            drawAdvancedSkeleton(
+                mainCtx,
+                latestComparisonData.user_keypoints,
+                latestComparisonData.ref_keypoints,
+                new Set(latestComparisonData.wrong_keypoints || []),
+                mainCanvas.width / 2, 
+                mainCanvas.height,
+                mainCanvas.width / 2 // offsetX
+            );
+
+            updateScore(latestComparisonData.score);
+
+            requestAnimationFrame(renderLoop);
+        }
+
+        function drawAdvancedSkeleton(ctx, userKps, refKps, wrongKpsSet, videoWidth, videoHeight, offsetX) {
+            // 1. Draw the reference "ghost" skeleton
+            if (refKps && refKps.length > 0) {
+                drawSkeleton(ctx, refKps, videoWidth, videoHeight, offsetX, 'rgba(255, 255, 255, 0.5)', new Set(), 3);
+            }
+            // 2. Draw the user's skeleton with error coloring
+            if (userKps && userKps.length > 0) {
+                drawSkeleton(ctx, userKps, videoWidth, videoHeight, offsetX, '#00FF00', wrongKpsSet, 2);
+            }
+        }
+
+        function drawSkeleton(ctx, keypoints, videoWidth, videoHeight, offsetX, defaultColor, wrongKeypointsSet, lineWidth) {
+            if (!keypoints || keypoints.length === 0) return;
+
+            const keypoints_2d = [];
+            for (let i = 0; i < keypoints.length; i += 2) {
+                keypoints_2d.push({ x: keypoints[i] * videoWidth + offsetX, y: keypoints[i+1] * videoHeight });
+            }
+
+            // Draw connections
+            POSE_CONNECTIONS.forEach(conn => {
+                const startIdx = conn[0];
+                const endIdx = conn[1];
+                const start = keypoints_2d[startIdx];
+                const end = keypoints_2d[endIdx];
+
+                if (start && end) {
+                    const isWrong = wrongKeypointsSet.has(startIdx) || wrongKeypointsSet.has(endIdx);
+                    ctx.beginPath();
+                    ctx.moveTo(start.x, start.y);
+                    ctx.lineTo(end.x, end.y);
+                    ctx.strokeStyle = isWrong ? '#FF0000' : defaultColor;
+                    ctx.lineWidth = lineWidth;
+                    ctx.stroke();
+                }
+            });
+        }
+        
+        function updateScore(score) {
+            if (score === undefined) return;
+            const scorePercent = Math.round(score * 100);
+            scoreDisplay.textContent = `Score: ${scorePercent}%`;
+            if (scorePercent > 70) scoreDisplay.style.color = '#28a745';
+            else if (scorePercent > 40) scoreDisplay.style.color = '#fd7e14';
+            else scoreDisplay.style.color = '#dc3545';
+        }
+
+        function stopSession(closeSocket = true) {
+            clearInterval(frameSendInterval);
+            frameSendInterval = null;
+            
+            if (userVideo.srcObject) {
+                userVideo.srcObject.getTracks().forEach(track => track.stop());
+                userVideo.srcObject = null;
+            }
+            if (referenceVideo) {
+                referenceVideo.pause();
+            }
+            if (closeSocket && websocket) {
+                websocket.close();
+            }
+            websocket = null;
+            
+            startButton.disabled = false;
+            startButton.textContent = "Start Live Session";
+            scoreDisplay.textContent = "Score: N/A";
+            scoreDisplay.style.color = '#172b4d';
+            
+            // Clear canvas one last time
+            setTimeout(() => mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height), 50);
+        }
+
+        function handleError(message, error) {
+            console.error(message, error);
+            statusText.textContent = message;
+            statusText.classList.add('error');
+            stopSession();
+        }
+
+    </script>
+</body>
+</html>
